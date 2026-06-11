@@ -33,24 +33,33 @@ export default function Sidebar({ collapsed, onCollapse }: SidebarProps) {
     }, []);
 
     const items = [...menuItems];
+    if (role === 'ADMIN' || role === 'REGION_HEAD') {
+        items.push({
+            label: 'Regions',
+            icon: Map,
+            href: '/dashboard/regions'
+        });
+    }
+    if (role === 'ADMIN' || role === 'REGION_HEAD' || role === 'BRANCH_HEAD') {
+        items.push({
+            label: 'Branches',
+            icon: Building2,
+            href: '/dashboard/branches'
+        });
+    }
+    if (role === 'ADMIN' || role === 'REGION_HEAD' || role === 'BRANCH_HEAD' || role === 'FRANCHISE_HEAD') {
+        items.push({
+            label: 'Franchises',
+            icon: Store,
+            href: '/dashboard/franchises'
+        });
+    }
     if (role === 'ADMIN') {
-        items.push(
-            {
-                label: 'Regions',
-                icon: Map,
-                href: '/dashboard/regions'
-            },
-            {
-                label: 'Branches',
-                icon: Building2,
-                href: '/dashboard/branches'
-            },
-            {
-                label: 'Franchises',
-                icon: Store,
-                href: '/dashboard/franchises'
-            }
-        );
+        items.push({
+            label: 'Users',
+            icon: Users,
+            href: '/dashboard/users'
+        });
     }
 
     return (

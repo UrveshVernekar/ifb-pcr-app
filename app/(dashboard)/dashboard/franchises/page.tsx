@@ -67,17 +67,24 @@ export default function FranchisesPage() {
   const apiBase = useMemo(() => getApiBaseUrl(), []);
 
   // Check user role
+  const [role, setRole] = useState<string | null>(null);
+
   useEffect(() => {
     const dataStr = sessionStorage.getItem('logindata');
     if (dataStr) {
       try {
         const data = JSON.parse(dataStr);
         setIsAdmin(data.role === 'ADMIN');
+        setRole(data.role || null);
       } catch (e) {
         console.error('Failed to parse user logindata:', e);
       }
     }
   }, []);
+
+  const canManage = useMemo(() => {
+    return role === 'ADMIN' || role === 'REGION_HEAD' || role === 'BRANCH_HEAD';
+  }, [role]);
 
   const fetchData = async () => {
     try {
@@ -133,7 +140,7 @@ export default function FranchisesPage() {
   }, [franchises, searchQuery]);
 
   const openAddModal = () => {
-    setBranchId(branches.length > 0 ? branches[0].branch_id : '');
+    setBranchId(branches.length === 1 ? branches[0].branch_id : '');
     setName('');
     setCode('');
     setContactPerson('');
@@ -310,7 +317,7 @@ export default function FranchisesPage() {
             Configure dealership franchises and local partner mappings.
           </p>
         </div>
-        {isAdmin && (
+        {canManage && (
           <Button
             onClick={openAddModal}
             className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg hover:shadow-blue-500/10 transition-all cursor-pointer h-10 px-4 text-xs font-semibold"
@@ -380,7 +387,7 @@ export default function FranchisesPage() {
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Contact Person</TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Contact Email</TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Status</TableHead>
-                    {isAdmin && <TableHead className="text-right pr-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Actions</TableHead>}
+                    {canManage && <TableHead className="text-right pr-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -406,7 +413,7 @@ export default function FranchisesPage() {
                           {franchise.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
-                      {isAdmin && (
+                      {canManage && (
                         <TableCell className="py-4 text-right pr-6">
                           <div className="flex items-center justify-end gap-2">
                             <Button
@@ -469,7 +476,7 @@ export default function FranchisesPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
               <label htmlFor="branch" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Linked Branch *</label>
-              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
+              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting || branches.length <= 1}>
                 <SelectTrigger id="branch" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Branch" />
                 </SelectTrigger>
@@ -591,7 +598,7 @@ export default function FranchisesPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
               <label htmlFor="branch-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Linked Branch *</label>
-              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
+              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting || branches.length <= 1}>
                 <SelectTrigger id="branch-edit" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Branch" />
                 </SelectTrigger>

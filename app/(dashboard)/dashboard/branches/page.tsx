@@ -67,17 +67,24 @@ export default function BranchesPage() {
   const apiBase = useMemo(() => getApiBaseUrl(), []);
 
   // Check user role
+  const [role, setRole] = useState<string | null>(null);
+
   useEffect(() => {
     const dataStr = sessionStorage.getItem('logindata');
     if (dataStr) {
       try {
         const data = JSON.parse(dataStr);
         setIsAdmin(data.role === 'ADMIN');
+        setRole(data.role || null);
       } catch (e) {
         console.error('Failed to parse user logindata:', e);
       }
     }
   }, []);
+
+  const canManage = useMemo(() => {
+    return role === 'ADMIN' || role === 'REGION_HEAD';
+  }, [role]);
 
   const fetchData = async () => {
     try {
@@ -127,7 +134,7 @@ export default function BranchesPage() {
   }, [branches, searchQuery]);
 
   const openAddModal = () => {
-    setRegionId(regions.length > 0 ? regions[0].region_id : '');
+    setRegionId(regions.length === 1 ? regions[0].region_id : '');
     setName('');
     setCode('');
     setAddress('');
@@ -308,7 +315,7 @@ export default function BranchesPage() {
             Configure branches, offices, and distribution points.
           </p>
         </div>
-        {isAdmin && (
+        {canManage && (
           <Button
             onClick={openAddModal}
             className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg hover:shadow-blue-500/10 transition-all cursor-pointer h-10 px-4 text-xs font-semibold"
@@ -359,7 +366,7 @@ export default function BranchesPage() {
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">City / State</TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Contact</TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Status</TableHead>
-                    {isAdmin && <TableHead className="text-right pr-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Actions</TableHead>}
+                    {canManage && <TableHead className="text-right pr-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -389,7 +396,7 @@ export default function BranchesPage() {
                           {branch.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
-                      {isAdmin && (
+                      {canManage && (
                         <TableCell className="py-4 text-right pr-6">
                           <div className="flex items-center justify-end gap-2">
                             <Button
@@ -452,7 +459,7 @@ export default function BranchesPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
               <label htmlFor="region" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region *</label>
-              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
+              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting || regions.length <= 1}>
                 <SelectTrigger id="region" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Region" />
                 </SelectTrigger>
@@ -586,7 +593,7 @@ export default function BranchesPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
               <label htmlFor="region-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region *</label>
-              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
+              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting || regions.length <= 1}>
                 <SelectTrigger id="region-edit" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select a region" />
                 </SelectTrigger>
