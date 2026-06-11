@@ -403,7 +403,7 @@ export default function BranchesPage() {
                               onClick={() => openEditModal(branch)}
                               variant="outline"
                               size="icon"
-                              className="h-8 w-8 rounded-lg text-zinc-600 hover:text-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                              className="h-8 w-8 rounded-lg text-blue-600 hover:text-blue-900 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-800 cursor-pointer"
                             >
                               <Edit className="w-3.5 h-3.5" />
                             </Button>
@@ -411,7 +411,7 @@ export default function BranchesPage() {
                               onClick={() => openDeleteModal(branch)}
                               variant="outline"
                               size="icon"
-                              className="h-8 w-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/10 border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                              className="h-8 w-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/10 border-red-200 dark:border-red-800 cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
