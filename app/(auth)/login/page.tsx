@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2, Mail, Lock, KeyRound, User, RefreshCw, ArrowLeft, CheckCircle2, ShieldCheck, AlertCircle, Check } from "lucide-react";
+import { Eye, EyeOff, Loader2, Mail, Lock, KeyRound, User, ArrowLeft, CheckCircle2, ShieldCheck, AlertCircle, Check } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -266,7 +266,7 @@ export default function LoginPage() {
                                         autoComplete="email"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="john.doe@ifbglobal.com"
+                                        placeholder="urvesh_vernekar@ifbglobal.com"
                                         className="pl-12 w-full h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-xs focus-visible:ring-2 focus-visible:ring-blue-500/10 focus-visible:border-blue-500 focus-visible:bg-white dark:focus-visible:bg-zinc-950 transition-all duration-200"
                                         disabled={isSubmitting}
                                         required
@@ -333,7 +333,7 @@ export default function LoginPage() {
                                         autoComplete="email"
                                         value={forgotEmail}
                                         onChange={(e) => setForgotEmail(e.target.value)}
-                                        placeholder="john.doe@ifbglobal.com"
+                                        placeholder="urvesh_vernekar@ifbglobal.com"
                                         className="pl-12 w-full h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-xs focus-visible:ring-2 focus-visible:ring-blue-500/10 focus-visible:border-blue-500 transition-all duration-200"
                                         disabled={isSubmitting}
                                         required

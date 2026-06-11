@@ -1,7 +1,5 @@
-// components/shared/Sidebar.tsx
-'use client';
-
-import { Home, Factory, ChevronRight, ChevronLeft, Shield, Calendar, Gauge, Wrench, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Home, Factory, ChevronRight, ChevronLeft, Shield, Calendar, Gauge, Wrench, Users, Map, Building2, Store } from 'lucide-react';
 import SidebarItem from './SidebarItem';
 import Image from 'next/image';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -17,34 +15,44 @@ const menuItems = [
         icon: Home,
         href: '/dashboard'
     },
-    // {
-    //     label: 'Planning',
-    //     icon: Calendar,
-    //     href: '/planning'
-    // },
-    // {
-    //     label: 'Safety',
-    //     icon: Shield,
-    //     href: '/safety'
-    // },
-    // {
-    //     label: 'Quality',
-    //     icon: Gauge,
-    //     href: '/quality'
-    // },
-    // {
-    //     label: 'Maintenance',
-    //     icon: Wrench,
-    //     href: '/maintenance'
-    // },
-    // {
-    //     label: 'HR',
-    //     icon: Users,
-    //     href: '/hr'
-    // },
 ];
 
 export default function Sidebar({ collapsed, onCollapse }: SidebarProps) {
+    const [role, setRole] = useState<string | null>(null);
+
+    useEffect(() => {
+        const dataStr = sessionStorage.getItem('logindata');
+        if (dataStr) {
+            try {
+                const data = JSON.parse(dataStr);
+                setRole(data.role || null);
+            } catch (e) {
+                console.error('Failed to parse logindata in Sidebar:', e);
+            }
+        }
+    }, []);
+
+    const items = [...menuItems];
+    if (role === 'ADMIN') {
+        items.push(
+            {
+                label: 'Regions',
+                icon: Map,
+                href: '/dashboard/regions'
+            },
+            {
+                label: 'Branches',
+                icon: Building2,
+                href: '/dashboard/branches'
+            },
+            {
+                label: 'Franchises',
+                icon: Store,
+                href: '/dashboard/franchises'
+            }
+        );
+    }
+
     return (
         <TooltipProvider delayDuration={0}>
             {!collapsed && (
@@ -96,7 +104,7 @@ export default function Sidebar({ collapsed, onCollapse }: SidebarProps) {
                     </div>
 
                     <nav className="space-y-1">
-                        {menuItems.map((item) => (
+                        {items.map((item) => (
                             <SidebarItem
                                 key={item.href}
                                 icon={item.icon}
