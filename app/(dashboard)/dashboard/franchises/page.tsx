@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { Store, Plus, Search, Edit, Trash2, Loader2, AlertCircle, X, Filter } from 'lucide-react';
+import { Store, Plus, Search, Edit, Trash2, Loader2, Filter } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/auth-client';
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
@@ -12,14 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { BaseDialog } from '@/components/shared/BaseDialog';
 import { BaseConfirmDialog } from '@/components/shared/BaseConfirmDialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { BaseTable, Column } from '@/components/shared/BaseTable';
 
 interface Franchise {
   franchise_id: number;
@@ -138,6 +131,73 @@ export default function FranchisesPage() {
       return nameMatch || codeMatch || contactPersonMatch || contactEmailMatch || branchMatch;
     });
   }, [franchises, searchQuery]);
+
+  const columns: Column<Franchise>[] = useMemo(() => {
+    const cols: Column<Franchise>[] = [
+      {
+        header: 'Code',
+        className: 'pl-6 font-mono font-bold text-zinc-900 dark:text-zinc-100',
+        render: (franchise) => franchise.code,
+      },
+      {
+        header: 'Name',
+        className: 'font-semibold text-zinc-800 dark:text-zinc-200',
+        render: (franchise) => franchise.name,
+      },
+      {
+        header: 'Linked Branch',
+        className: 'text-zinc-650 dark:text-zinc-400',
+        render: (franchise) => franchise.branch_name || <span className="text-zinc-400 italic">None</span>,
+      },
+      {
+        header: 'Contact Person',
+        className: 'text-zinc-600 dark:text-zinc-400',
+        render: (franchise) => franchise.contact_person || <span className="text-zinc-400 italic">None</span>,
+      },
+      {
+        header: 'Contact Email',
+        className: 'text-zinc-500 dark:text-zinc-400 font-mono',
+        render: (franchise) => franchise.contact_email || <span className="text-zinc-400 italic">None</span>,
+      },
+      {
+        header: 'Status',
+        render: (franchise) => (
+          <Badge variant={franchise.is_active ? 'default' : 'destructive'} className="text-[10px] px-2 py-0.5 rounded-full font-semibold">
+            {franchise.is_active ? 'Active' : 'Inactive'}
+          </Badge>
+        ),
+      },
+    ];
+
+    if (canManage) {
+      cols.push({
+        header: 'Actions',
+        className: 'text-right pr-6',
+        render: (franchise) => (
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              onClick={() => openEditModal(franchise)}
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-lg text-blue-600 hover:text-blue-900 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-800 cursor-pointer"
+            >
+              <Edit className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              onClick={() => openDeleteModal(franchise)}
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/10 border-red-200 dark:border-red-800 cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        ),
+      });
+    }
+
+    return cols;
+  }, [canManage]);
 
   const openAddModal = () => {
     setBranchId(branches.length === 1 ? branches[0].branch_id : '');
@@ -365,82 +425,14 @@ export default function FranchisesPage() {
         </CardHeader>
 
         <CardContent className="p-0">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-              <span className="text-xs">Loading franchises...</span>
-            </div>
-          ) : filteredFranchises.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-1">
-              <AlertCircle className="w-10 h-10 text-zinc-400 dark:text-zinc-650" />
-              <span className="text-sm font-semibold">No Franchises Found</span>
-              <span className="text-xs text-zinc-400">Try modifying your filters/search or add a franchise.</span>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-zinc-50/50 dark:bg-zinc-900/30">
-                  <TableRow>
-                    <TableHead className="pl-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Code</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Name</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Linked Branch</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Contact Person</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Contact Email</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Status</TableHead>
-                    {canManage && <TableHead className="text-right pr-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Actions</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredFranchises.map((franchise) => (
-                    <TableRow key={franchise.franchise_id} className="hover:bg-zinc-50/30 dark:hover:bg-zinc-950/10 border-b border-zinc-100 dark:border-zinc-800/80 animate-in fade-in duration-200">
-                      <TableCell className="pl-6 py-4 font-mono font-bold text-zinc-900 dark:text-zinc-100 text-xs">
-                        {franchise.code}
-                      </TableCell>
-                      <TableCell className="py-4 font-semibold text-zinc-800 dark:text-zinc-200 text-xs">
-                        {franchise.name}
-                      </TableCell>
-                      <TableCell className="py-4 text-xs text-zinc-600 dark:text-zinc-400">
-                        {franchise.branch_name || <span className="text-zinc-400 italic">None</span>}
-                      </TableCell>
-                      <TableCell className="py-4 text-xs text-zinc-600 dark:text-zinc-400">
-                        {franchise.contact_person || <span className="text-zinc-400 italic">None</span>}
-                      </TableCell>
-                      <TableCell className="py-4 text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-                        {franchise.contact_email || <span className="text-zinc-400 italic">None</span>}
-                      </TableCell>
-                      <TableCell className="py-4 text-xs">
-                        <Badge variant={franchise.is_active ? 'default' : 'destructive'} className="text-[10px] px-2 py-0.5 rounded-full font-semibold">
-                          {franchise.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      {canManage && (
-                        <TableCell className="py-4 text-right pr-6">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              onClick={() => openEditModal(franchise)}
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 rounded-lg text-blue-600 hover:text-blue-900 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-800 cursor-pointer"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button
-                              onClick={() => openDeleteModal(franchise)}
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/10 border-red-200 dark:border-red-800 cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <BaseTable
+            columns={columns}
+            data={filteredFranchises}
+            loading={loading}
+            emptyTitle="No Franchises Found"
+            emptyDescription="Try modifying your filters/search or add a franchise."
+            keyExtractor={(franchise) => franchise.franchise_id}
+          />
         </CardContent>
       </Card>
 

@@ -1,24 +1,17 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { Users, Plus, Search, Edit, Trash2, Loader2, AlertCircle, Key, UserCheck, ShieldAlert } from 'lucide-react';
+import { Users, Plus, Search, Edit, Trash2, Loader2, Key, UserCheck, ShieldAlert } from 'lucide-react';
 import { getApiBaseUrl, encryptValue } from '@/lib/auth-client';
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { BaseDialog } from '@/components/shared/BaseDialog';
 import { BaseConfirmDialog } from '@/components/shared/BaseConfirmDialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { BaseTable, Column } from '@/components/shared/BaseTable';
 
 interface UserRecord {
   id: number;
@@ -184,6 +177,84 @@ export default function UsersManagementPage() {
       return nameMatch || emailMatch || codeMatch || roleMatch;
     });
   }, [users, searchQuery]);
+
+  const columns: Column<UserRecord>[] = useMemo(() => [
+    {
+      header: 'Employee Code',
+      className: 'pl-6 font-mono font-bold text-zinc-900 dark:text-zinc-100',
+      render: (user) => user.employee_id || <span className="text-zinc-400 italic">None</span>,
+    },
+    {
+      header: 'Name',
+      className: 'font-semibold text-zinc-800 dark:text-zinc-200',
+      render: (user) => user.name,
+    },
+    {
+      header: 'Email',
+      className: 'text-zinc-650 dark:text-zinc-400',
+      render: (user) => user.email,
+    },
+    {
+      header: 'Role',
+      render: (user) => (
+        <Badge className={`${getRoleBadgeColor(user.role)} text-[10px] px-2 py-0.5 rounded-full font-semibold border-none`}>
+          {user.role}
+        </Badge>
+      ),
+    },
+    {
+      header: 'Assignment',
+      className: 'text-zinc-600 dark:text-zinc-400',
+      render: (user) => (
+        <>
+          {user.role === 'REGION_HEAD' && (
+            <span className="font-semibold text-indigo-600 dark:text-indigo-400">Region: {user.region_name || 'Unassigned'}</span>
+          )}
+          {user.role === 'BRANCH_HEAD' && (
+            <span className="font-semibold text-sky-600 dark:text-sky-400">Branch: {user.branch_name || 'Unassigned'}</span>
+          )}
+          {user.role === 'FRANCHISE_HEAD' && (
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">Franchise: {user.franchise_name || 'Unassigned'}</span>
+          )}
+          {!['REGION_HEAD', 'BRANCH_HEAD', 'FRANCHISE_HEAD'].includes(user.role) && (
+            <span className="text-zinc-400 italic">Global Access</span>
+          )}
+        </>
+      ),
+    },
+    {
+      header: 'Status',
+      render: (user) => (
+        <Badge variant={user.is_active ? 'default' : 'destructive'} className="text-[10px] px-2 py-0.5 rounded-full font-semibold">
+          {user.is_active ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
+    {
+      header: 'Actions',
+      className: 'text-right pr-6',
+      render: (user) => (
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            onClick={() => openEditModal(user)}
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-lg text-blue-600 hover:text-blue-900 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-800 cursor-pointer"
+          >
+            <Edit className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            onClick={() => openDeleteModal(user)}
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/10 border-red-200 dark:border-red-800 cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      ),
+    },
+  ], []);
 
   const openAddModal = () => {
     setName('');
@@ -407,93 +478,14 @@ export default function UsersManagementPage() {
         </CardHeader>
 
         <CardContent className="p-0">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-              <span className="text-xs">Loading accounts...</span>
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-1">
-              <AlertCircle className="w-10 h-10 text-zinc-400 dark:text-zinc-650" />
-              <span className="text-sm font-semibold">No Users Found</span>
-              <span className="text-xs text-zinc-400">Add a new user to populate this list.</span>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-zinc-50/50 dark:bg-zinc-900/30">
-                  <TableRow>
-                    <TableHead className="pl-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Employee Code</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Name</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Email</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Role</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Assignment</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Status</TableHead>
-                    <TableHead className="text-right pr-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-zinc-50/30 dark:hover:bg-zinc-950/10 border-b border-zinc-100 dark:border-zinc-800/80 animate-in fade-in duration-200">
-                      <TableCell className="pl-6 py-4 font-mono font-bold text-zinc-900 dark:text-zinc-100 text-xs">
-                        {user.employee_id || <span className="text-zinc-400 italic">None</span>}
-                      </TableCell>
-                      <TableCell className="py-4 font-semibold text-zinc-800 dark:text-zinc-200 text-xs">
-                        {user.name}
-                      </TableCell>
-                      <TableCell className="py-4 text-xs text-zinc-600 dark:text-zinc-400">
-                        {user.email}
-                      </TableCell>
-                      <TableCell className="py-4 text-xs">
-                        <Badge className={`${getRoleBadgeColor(user.role)} text-[10px] px-2 py-0.5 rounded-full font-semibold border-none`}>
-                          {user.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-4 text-xs text-zinc-600 dark:text-zinc-400">
-                        {user.role === 'REGION_HEAD' && (
-                          <span className="font-semibold text-indigo-600 dark:text-indigo-400">Region: {user.region_name || 'Unassigned'}</span>
-                        )}
-                        {user.role === 'BRANCH_HEAD' && (
-                          <span className="font-semibold text-sky-600 dark:text-sky-400">Branch: {user.branch_name || 'Unassigned'}</span>
-                        )}
-                        {user.role === 'FRANCHISE_HEAD' && (
-                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">Franchise: {user.franchise_name || 'Unassigned'}</span>
-                        )}
-                        {!['REGION_HEAD', 'BRANCH_HEAD', 'FRANCHISE_HEAD'].includes(user.role) && (
-                          <span className="text-zinc-400 italic">Global Access</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="py-4 text-xs">
-                        <Badge variant={user.is_active ? 'default' : 'destructive'} className="text-[10px] px-2 py-0.5 rounded-full font-semibold">
-                          {user.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-4 text-right pr-6">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            onClick={() => openEditModal(user)}
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg text-blue-600 hover:text-blue-900 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-800 cursor-pointer"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            onClick={() => openDeleteModal(user)}
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/10 border-red-200 dark:border-red-800 cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <BaseTable
+            columns={columns}
+            data={filteredUsers}
+            loading={loading}
+            emptyTitle="No Users Found"
+            emptyDescription="Add a new user to populate this list."
+            keyExtractor={(user) => user.id}
+          />
         </CardContent>
       </Card>
 
