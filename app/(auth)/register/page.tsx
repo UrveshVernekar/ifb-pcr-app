@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2, User, Mail, Lock, KeyRound, ShieldCheck, CheckCircle2, Check, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Loader2, User, Mail, Lock, ShieldCheck, Check } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState("EMPLOYEE");
+  const [role, setRole] = useState("USER");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -126,7 +126,7 @@ export default function RegisterPage() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="John Doe"
+                  placeholder="Urvesh Vernekar"
                   className="pl-12 w-full h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-xs focus-visible:ring-2 focus-visible:ring-blue-500/10 focus-visible:border-blue-500 transition-all duration-200"
                   disabled={isSubmitting}
                   required
@@ -142,10 +142,10 @@ export default function RegisterPage() {
                 </div>
                 <Input
                   id="employeeId"
-                  type="text"
+                  type="number"
                   value={employeeId}
                   onChange={(e) => setEmployeeId(e.target.value)}
-                  placeholder="E12345"
+                  placeholder="10001234"
                   className="pl-12 w-full h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-xs focus-visible:ring-2 focus-visible:ring-blue-500/10 focus-visible:border-blue-500 transition-all duration-200"
                   disabled={isSubmitting}
                   required
@@ -167,7 +167,7 @@ export default function RegisterPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="john.doe@ifbglobal.com"
+                  placeholder="urvesh_vernekar@ifbglobal.com"
                   className="pl-12 w-full h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-xs focus-visible:ring-2 focus-visible:ring-blue-500/10 focus-visible:border-blue-500 transition-all duration-200"
                   disabled={isSubmitting}
                   required
@@ -178,15 +178,11 @@ export default function RegisterPage() {
             <div className="space-y-1.5">
               <Label htmlFor="role" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">User Role</Label>
               <Select value={role} onValueChange={setRole} disabled={isSubmitting}>
-                <SelectTrigger id="role" className="w-full h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
+                <SelectTrigger id="role" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-[100] text-xs">
-                  <SelectItem value="EMPLOYEE" className="rounded-lg cursor-pointer text-xs">Employee</SelectItem>
-                  <SelectItem value="OPERATOR" className="rounded-lg cursor-pointer text-xs">Operator</SelectItem>
-                  <SelectItem value="QUALITY_INSPECTOR" className="rounded-lg cursor-pointer text-xs">Quality Inspector</SelectItem>
-                  <SelectItem value="SAFETY_OFFICER" className="rounded-lg cursor-pointer text-xs">Safety Officer</SelectItem>
-                  <SelectItem value="MANAGER" className="rounded-lg cursor-pointer text-xs">Manager</SelectItem>
+                  <SelectItem value="USER" className="rounded-lg cursor-pointer text-xs">User</SelectItem>
                   <SelectItem value="ADMIN" className="rounded-lg cursor-pointer text-xs">Admin</SelectItem>
                 </SelectContent>
               </Select>
