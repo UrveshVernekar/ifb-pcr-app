@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { BaseDialog } from '@/components/shared/BaseDialog';
+import { BaseConfirmDialog } from '@/components/shared/BaseConfirmDialog';
 import {
   Table,
   TableBody,
@@ -419,334 +421,285 @@ export default function BranchesPage() {
       </Card>
 
       {/* Add Branch Modal */}
-      {isAddOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <Card className="w-full max-w-lg border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-zinc-900 rounded-2xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="flex flex-row justify-between items-center pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <div>
-                <CardTitle className="text-md font-bold">Add New Branch</CardTitle>
-                <CardDescription className="text-xs">Create a branch linked to a geographical region.</CardDescription>
-              </div>
-              <button onClick={() => setIsAddOpen(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
-                <X className="w-4 h-4" />
-              </button>
-            </CardHeader>
-            <form onSubmit={handleAddBranch}>
-              <CardContent className="space-y-4 p-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                    <label htmlFor="region" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region *</label>
-                    <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
-                      <SelectTrigger id="region" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
-                        <SelectValue placeholder="Select Region" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-[9999] text-xs">
-                        <SelectItem value="Select Region" disabled className="rounded-lg text-xs text-zinc-400">Select Region</SelectItem>
-                        {regions.map((r) => (
-                          <SelectItem key={r.region_id} value={String(r.region_id)} className="rounded-lg cursor-pointer text-xs">{r.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                    <label htmlFor="code" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Branch Code *</label>
-                    <Input
-                      id="code"
-                      type="text"
-                      required
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      placeholder="e.g. BR-MUM"
-                      className="h-10 text-xs rounded-xl"
-                    />
-                  </div>
-                </div>
+      <BaseDialog
+        open={isAddOpen}
+        onOpenChange={setIsAddOpen}
+        title="Add New Branch"
+        description="Create a branch linked to a geographical region."
+        className="sm:max-w-lg"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsAddOpen(false)}
+              className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="add-branch-form"
+              disabled={isSubmitting}
+              className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md cursor-pointer h-10 px-4 text-xs font-semibold"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Branch'}
+            </Button>
+          </>
+        }
+      >
+        <form id="add-branch-form" onSubmit={handleAddBranch} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
+              <label htmlFor="region" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region *</label>
+              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
+                <SelectTrigger id="region" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
+                  <SelectValue placeholder="Select Region" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-[9999] text-xs">
+                  <SelectItem value="Select Region" disabled className="rounded-lg text-xs text-zinc-400">Select Region</SelectItem>
+                  {regions.map((r) => (
+                    <SelectItem key={r.region_id} value={String(r.region_id)} className="rounded-lg cursor-pointer text-xs">{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
+              <label htmlFor="code" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Branch Code *</label>
+              <Input
+                id="code"
+                type="text"
+                required
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="e.g. BR-MUM"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+          </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="name" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Branch Name *</label>
-                  <Input
-                    id="name"
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Mumbai Main Branch"
-                    className="h-10 text-xs rounded-xl"
-                  />
-                </div>
+          <div className="space-y-1.5">
+            <label htmlFor="name" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Branch Name *</label>
+            <Input
+              id="name"
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Mumbai Main Branch"
+              className="h-10 text-xs rounded-xl"
+            />
+          </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label htmlFor="city" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">City</label>
-                    <Input
-                      id="city"
-                      type="text"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder="e.g. Mumbai"
-                      className="h-10 text-xs rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label htmlFor="state" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">State</label>
-                    <Input
-                      id="state"
-                      type="text"
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      placeholder="e.g. Maharashtra"
-                      className="h-10 text-xs rounded-xl"
-                    />
-                  </div>
-                </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="city" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">City</label>
+              <Input
+                id="city"
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="e.g. Mumbai"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="state" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">State</label>
+              <Input
+                id="state"
+                type="text"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                placeholder="e.g. Maharashtra"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+          </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="contact" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Contact Number</label>
-                  <Input
-                    id="contact"
-                    type="text"
-                    value={contactNumber}
-                    onChange={(e) => setContactNumber(e.target.value)}
-                    placeholder="e.g. +91 22 12345678"
-                    className="h-10 text-xs rounded-xl"
-                  />
-                </div>
+          <div className="space-y-1.5">
+            <label htmlFor="contact" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Contact Number</label>
+            <Input
+              id="contact"
+              type="text"
+              value={contactNumber}
+              onChange={(e) => setContactNumber(e.target.value)}
+              placeholder="e.g. +91 22 12345678"
+              className="h-10 text-xs rounded-xl"
+            />
+          </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="address" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Street Address</label>
-                  <Textarea
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Enter complete office address..."
-                    className="text-xs rounded-xl min-h-[60px]"
-                  />
-                </div>
+          <div className="space-y-1.5">
+            <label htmlFor="address" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Street Address</label>
+            <Textarea
+              id="address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Enter complete office address..."
+              className="text-xs rounded-xl min-h-[60px]"
+            />
+          </div>
 
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    id="is_active"
-                    type="checkbox"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                    className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
-                  />
-                  <label htmlFor="is_active" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 select-none">
-                    Mark as Active
-                  </label>
-                </div>
-              </CardContent>
-              <div className="flex justify-end items-center gap-2 p-5 border-t border-zinc-100 dark:border-zinc-800">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAddOpen(false)}
-                  className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md cursor-pointer h-10 px-4 text-xs font-semibold"
-                >
-                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Branch'}
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+          <div className="flex items-center gap-2 pt-2">
+            <input
+              id="is_active"
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+            />
+            <label htmlFor="is_active" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 select-none">
+              Mark as Active
+            </label>
+          </div>
+        </form>
+      </BaseDialog>
 
       {/* Edit Branch Modal */}
-      {isEditOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <Card className="w-full max-w-lg border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-zinc-900 rounded-2xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="flex flex-row justify-between items-center pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <div>
-                <CardTitle className="text-md font-bold">Edit Branch</CardTitle>
-                <CardDescription className="text-xs">Modify branch operational details.</CardDescription>
-              </div>
-              <button onClick={() => setIsEditOpen(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
-                <X className="w-4 h-4" />
-              </button>
-            </CardHeader>
-            <form onSubmit={handleUpdateBranch}>
-              <CardContent className="space-y-4 p-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                    <label htmlFor="region-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region *</label>
-                    {/* <select
-                      id="region-edit"
-                      value={regionId}
-                      onChange={(e) => setRegionId(e.target.value ? Number(e.target.value) : '')}
-                      required
-                      className="w-full h-10 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/55 dark:bg-zinc-950/30 text-zinc-900 dark:text-zinc-50"
-                    >
-                      <option value="">Select Region</option>
-                      {regions.map((r) => (
-                        <option key={r.region_id} value={r.region_id}>{r.name}</option>
-                      ))}
-                    </select> */}
+      <BaseDialog
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        title="Edit Branch"
+        description="Modify branch operational details."
+        className="sm:max-w-lg"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsEditOpen(false)}
+              className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="edit-branch-form"
+              disabled={isSubmitting}
+              className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md cursor-pointer h-10 px-4 text-xs font-semibold"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+            </Button>
+          </>
+        }
+      >
+        <form id="edit-branch-form" onSubmit={handleUpdateBranch} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
+              <label htmlFor="region-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region *</label>
+              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
+                <SelectTrigger id="region-edit" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
+                  <SelectValue placeholder="Select a region" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-[9999] text-xs">
+                  <SelectItem value="none" disabled className="rounded-lg text-xs text-zinc-400">Select Region</SelectItem>
+                  {regions.map((r) => (
+                    <SelectItem key={r.region_id} value={String(r.region_id)} className="rounded-lg cursor-pointer text-xs">{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
+              <label htmlFor="code-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Branch Code *</label>
+              <Input
+                id="code-edit"
+                type="text"
+                required
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="e.g. BR-MUM"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+          </div>
 
-                    <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
-                      <SelectTrigger id="region-edit" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
-                        <SelectValue placeholder="Select a region" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-[9999] text-xs">
-                        <SelectItem value="none" disabled className="rounded-lg text-xs text-zinc-400">Select Region</SelectItem>
-                        {regions.map((r) => (
-                          <SelectItem key={r.region_id} value={String(r.region_id)} className="rounded-lg cursor-pointer text-xs">{r.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                    <label htmlFor="code-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Branch Code *</label>
-                    <Input
-                      id="code-edit"
-                      type="text"
-                      required
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      placeholder="e.g. BR-MUM"
-                      className="h-10 text-xs rounded-xl"
-                    />
-                  </div>
-                </div>
+          <div className="space-y-1.5">
+            <label htmlFor="name-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Branch Name *</label>
+            <Input
+              id="name-edit"
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Mumbai Main Branch"
+              className="h-10 text-xs rounded-xl"
+            />
+          </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="name-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Branch Name *</label>
-                  <Input
-                    id="name-edit"
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Mumbai Main Branch"
-                    className="h-10 text-xs rounded-xl"
-                  />
-                </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="city-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">City</label>
+              <Input
+                id="city-edit"
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="e.g. Mumbai"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="state-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">State</label>
+              <Input
+                id="state-edit"
+                type="text"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                placeholder="e.g. Maharashtra"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+          </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label htmlFor="city-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">City</label>
-                    <Input
-                      id="city-edit"
-                      type="text"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder="e.g. Mumbai"
-                      className="h-10 text-xs rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label htmlFor="state-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">State</label>
-                    <Input
-                      id="state-edit"
-                      type="text"
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      placeholder="e.g. Maharashtra"
-                      className="h-10 text-xs rounded-xl"
-                    />
-                  </div>
-                </div>
+          <div className="space-y-1.5">
+            <label htmlFor="contact-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Contact Number</label>
+            <Input
+              id="contact-edit"
+              type="text"
+              value={contactNumber}
+              onChange={(e) => setContactNumber(e.target.value)}
+              placeholder="e.g. +91 22 12345678"
+              className="h-10 text-xs rounded-xl"
+            />
+          </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="contact-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Contact Number</label>
-                  <Input
-                    id="contact-edit"
-                    type="text"
-                    value={contactNumber}
-                    onChange={(e) => setContactNumber(e.target.value)}
-                    placeholder="e.g. +91 22 12345678"
-                    className="h-10 text-xs rounded-xl"
-                  />
-                </div>
+          <div className="space-y-1.5">
+            <label htmlFor="address-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Street Address</label>
+            <Textarea
+              id="address-edit"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Enter complete office address..."
+              className="text-xs rounded-xl min-h-[60px]"
+            />
+          </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="address-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Street Address</label>
-                  <Textarea
-                    id="address-edit"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Enter complete office address..."
-                    className="text-xs rounded-xl min-h-[60px]"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    id="is_active_edit"
-                    type="checkbox"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                    className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
-                  />
-                  <label htmlFor="is_active_edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 select-none">
-                    Mark as Active
-                  </label>
-                </div>
-              </CardContent>
-              <div className="flex justify-end items-center gap-2 p-5 border-t border-zinc-100 dark:border-zinc-800">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsEditOpen(false)}
-                  className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md cursor-pointer h-10 px-4 text-xs font-semibold"
-                >
-                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+          <div className="flex items-center gap-2 pt-2">
+            <input
+              id="is_active_edit"
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+            />
+            <label htmlFor="is_active_edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 select-none">
+              Mark as Active
+            </label>
+          </div>
+        </form>
+      </BaseDialog>
 
       {/* Delete Confirmation Modal */}
-      {isDeleteOpen && selectedBranch && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <Card className="w-full max-w-sm border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-zinc-900 rounded-2xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <CardTitle className="text-sm font-bold flex items-center gap-1.5 text-red-500">
-                <AlertCircle className="w-4 h-4" /> Delete Branch?
-              </CardTitle>
-              <CardDescription className="text-xs">
-                This will soft delete the branch. It will no longer show in active listings, but database history is preserved.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-5">
-              <p className="text-xs text-zinc-600 dark:text-zinc-355">
-                Are you sure you want to soft delete the branch <strong>{selectedBranch.name}</strong> ({selectedBranch.code})?
-              </p>
-            </CardContent>
-            <div className="flex justify-end items-center gap-2 p-5 border-t border-zinc-100 dark:border-zinc-800">
-              <Button
-                variant="outline"
-                onClick={() => setIsDeleteOpen(false)}
-                className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleDeleteBranch}
-                disabled={isSubmitting}
-                className="rounded-xl bg-red-600 hover:bg-red-700 text-white cursor-pointer h-10 px-4 text-xs font-semibold"
-              >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Yes, Delete'}
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+      <BaseConfirmDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        title="Delete Branch?"
+        description={`This will soft delete the branch "${selectedBranch?.name || ''}" (${selectedBranch?.code || ''}). It will no longer show in active listings, but database history is preserved. Are you sure you want to soft delete this branch?`}
+        onConfirm={handleDeleteBranch}
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        isDestructive={true}
+        isLoading={isSubmitting}
+      />
     </div>
   );
 }

@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { BaseDialog } from '@/components/shared/BaseDialog';
+import { BaseConfirmDialog } from '@/components/shared/BaseConfirmDialog';
 import {
   Table,
   TableBody,
@@ -436,297 +438,261 @@ export default function FranchisesPage() {
       </Card>
 
       {/* Add Franchise Modal */}
-      {isAddOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <Card className="w-full max-w-lg border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-zinc-900 rounded-2xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="flex flex-row justify-between items-center pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <div>
-                <CardTitle className="text-md font-bold">Add New Franchise</CardTitle>
-                <CardDescription className="text-xs">Establish a dealer franchise assigned to a branch office.</CardDescription>
-              </div>
-              <button onClick={() => setIsAddOpen(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
-                <X className="w-4 h-4" />
-              </button>
-            </CardHeader>
-            <form onSubmit={handleAddFranchise}>
-              <CardContent className="space-y-4 p-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                    <label htmlFor="branch" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Linked Branch *</label>
-                    <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
-                      <SelectTrigger id="branch" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
-                        <SelectValue placeholder="Select Branch" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-[9999] text-xs">
-                        <SelectItem value="Select Branch" disabled className="rounded-lg text-xs text-zinc-400">Select Branch</SelectItem>
-                        {branches.map((b) => (
-                          <SelectItem key={b.branch_id} value={String(b.branch_id)} className="rounded-lg cursor-pointer text-xs">{b.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                    <label htmlFor="code" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Franchise Code *</label>
-                    <Input
-                      id="code"
-                      type="text"
-                      required
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      placeholder="e.g. FR-APEX-01"
-                      className="h-10 text-xs rounded-xl"
-                    />
-                  </div>
-                </div>
+      <BaseDialog
+        open={isAddOpen}
+        onOpenChange={setIsAddOpen}
+        title="Add New Franchise"
+        description="Establish a dealer franchise assigned to a branch office."
+        className="sm:max-w-lg"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsAddOpen(false)}
+              className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="add-franchise-form"
+              disabled={isSubmitting}
+              className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md cursor-pointer h-10 px-4 text-xs font-semibold"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Franchise'}
+            </Button>
+          </>
+        }
+      >
+        <form id="add-franchise-form" onSubmit={handleAddFranchise} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
+              <label htmlFor="branch" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Linked Branch *</label>
+              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
+                <SelectTrigger id="branch" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
+                  <SelectValue placeholder="Select Branch" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-[9999] text-xs">
+                  <SelectItem value="Select Branch" disabled className="rounded-lg text-xs text-zinc-400">Select Branch</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.branch_id} value={String(b.branch_id)} className="rounded-lg cursor-pointer text-xs">{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
+              <label htmlFor="code" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Franchise Code *</label>
+              <Input
+                id="code"
+                type="text"
+                required
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="e.g. FR-APEX-01"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+          </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="name" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Franchise Name *</label>
-                  <Input
-                    id="name"
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Apex Distribution Agency"
-                    className="h-10 text-xs rounded-xl"
-                  />
-                </div>
+          <div className="space-y-1.5">
+            <label htmlFor="name" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Franchise Name *</label>
+            <Input
+              id="name"
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Apex Distribution Agency"
+              className="h-10 text-xs rounded-xl"
+            />
+          </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label htmlFor="contact_person" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Contact Person</label>
-                    <Input
-                      id="contact_person"
-                      type="text"
-                      value={contactPerson}
-                      onChange={(e) => setContactPerson(e.target.value)}
-                      placeholder="e.g. Rajesh Kumar"
-                      className="h-10 text-xs rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label htmlFor="contact_email" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Contact Email</label>
-                    <Input
-                      id="contact_email"
-                      type="email"
-                      value={contactEmail}
-                      onChange={(e) => setContactEmail(e.target.value)}
-                      placeholder="e.g. rajesh@apex.com"
-                      className="h-10 text-xs rounded-xl"
-                    />
-                  </div>
-                </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="contact_person" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Contact Person</label>
+              <Input
+                id="contact_person"
+                type="text"
+                value={contactPerson}
+                onChange={(e) => setContactPerson(e.target.value)}
+                placeholder="e.g. Rajesh Kumar"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="contact_email" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Contact Email</label>
+              <Input
+                id="contact_email"
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="e.g. rajesh@apex.com"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+          </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="address" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Store / Outlet Address</label>
-                  <Textarea
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Enter complete showroom/outlet address..."
-                    className="text-xs rounded-xl min-h-[60px]"
-                  />
-                </div>
+          <div className="space-y-1.5">
+            <label htmlFor="address" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Store / Outlet Address</label>
+            <Textarea
+              id="address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Enter complete showroom/outlet address..."
+              className="text-xs rounded-xl min-h-[60px]"
+            />
+          </div>
 
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    id="is_active"
-                    type="checkbox"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                    className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
-                  />
-                  <label htmlFor="is_active" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 select-none">
-                    Mark as Active
-                  </label>
-                </div>
-              </CardContent>
-              <div className="flex justify-end items-center gap-2 p-5 border-t border-zinc-100 dark:border-zinc-800">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAddOpen(false)}
-                  className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md cursor-pointer h-10 px-4 text-xs font-semibold"
-                >
-                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Franchise'}
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+          <div className="flex items-center gap-2 pt-2">
+            <input
+              id="is_active"
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+            />
+            <label htmlFor="is_active" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 select-none">
+              Mark as Active
+            </label>
+          </div>
+        </form>
+      </BaseDialog>
 
       {/* Edit Franchise Modal */}
-      {isEditOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <Card className="w-full max-w-lg border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-zinc-900 rounded-2xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="flex flex-row justify-between items-center pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <div>
-                <CardTitle className="text-md font-bold">Edit Franchise</CardTitle>
-                <CardDescription className="text-xs">Modify franchise business details.</CardDescription>
-              </div>
-              <button onClick={() => setIsEditOpen(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
-                <X className="w-4 h-4" />
-              </button>
-            </CardHeader>
-            <form onSubmit={handleUpdateFranchise}>
-              <CardContent className="space-y-4 p-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                    <label htmlFor="branch-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Linked Branch *</label>
-                    <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
-                      <SelectTrigger id="branch-edit" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
-                        <SelectValue placeholder="Select Branch" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-[9999] text-xs">
-                        <SelectItem value="Select Branch" disabled className="rounded-lg text-xs text-zinc-400">Select Branch</SelectItem>
-                        {branches.map((b) => (
-                          <SelectItem key={b.branch_id} value={String(b.branch_id)} className="rounded-lg cursor-pointer text-xs">{b.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                    <label htmlFor="code-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Franchise Code *</label>
-                    <Input
-                      id="code-edit"
-                      type="text"
-                      required
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      placeholder="e.g. FR-APEX-01"
-                      className="h-10 text-xs rounded-xl"
-                    />
-                  </div>
-                </div>
+      <BaseDialog
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        title="Edit Franchise"
+        description="Modify franchise business details."
+        className="sm:max-w-lg"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsEditOpen(false)}
+              className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="edit-franchise-form"
+              disabled={isSubmitting}
+              className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md cursor-pointer h-10 px-4 text-xs font-semibold"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+            </Button>
+          </>
+        }
+      >
+        <form id="edit-franchise-form" onSubmit={handleUpdateFranchise} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
+              <label htmlFor="branch-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Linked Branch *</label>
+              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
+                <SelectTrigger id="branch-edit" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
+                  <SelectValue placeholder="Select Branch" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-[9999] text-xs">
+                  <SelectItem value="Select Branch" disabled className="rounded-lg text-xs text-zinc-400">Select Branch</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.branch_id} value={String(b.branch_id)} className="rounded-lg cursor-pointer text-xs">{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
+              <label htmlFor="code-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Franchise Code *</label>
+              <Input
+                id="code-edit"
+                type="text"
+                required
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="e.g. FR-APEX-01"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+          </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="name-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Franchise Name *</label>
-                  <Input
-                    id="name-edit"
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Apex Distribution Agency"
-                    className="h-10 text-xs rounded-xl"
-                  />
-                </div>
+          <div className="space-y-1.5">
+            <label htmlFor="name-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Franchise Name *</label>
+            <Input
+              id="name-edit"
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Apex Distribution Agency"
+              className="h-10 text-xs rounded-xl"
+            />
+          </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label htmlFor="contact_person_edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Contact Person</label>
-                    <Input
-                      id="contact_person_edit"
-                      type="text"
-                      value={contactPerson}
-                      onChange={(e) => setContactPerson(e.target.value)}
-                      placeholder="e.g. Rajesh Kumar"
-                      className="h-10 text-xs rounded-xl"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label htmlFor="contact_email_edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Contact Email</label>
-                    <Input
-                      id="contact_email_edit"
-                      type="email"
-                      value={contactEmail}
-                      onChange={(e) => setContactEmail(e.target.value)}
-                      placeholder="e.g. rajesh@apex.com"
-                      className="h-10 text-xs rounded-xl"
-                    />
-                  </div>
-                </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="contact_person_edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Contact Person</label>
+              <Input
+                id="contact_person_edit"
+                type="text"
+                value={contactPerson}
+                onChange={(e) => setContactPerson(e.target.value)}
+                placeholder="e.g. Rajesh Kumar"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="contact_email_edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Contact Email</label>
+              <Input
+                id="contact_email_edit"
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="e.g. rajesh@apex.com"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+          </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="address-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Store / Outlet Address</label>
-                  <Textarea
-                    id="address-edit"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Enter complete showroom/outlet address..."
-                    className="text-xs rounded-xl min-h-[60px]"
-                  />
-                </div>
+          <div className="space-y-1.5">
+            <label htmlFor="address-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Store / Outlet Address</label>
+            <Textarea
+              id="address-edit"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Enter complete showroom/outlet address..."
+              className="text-xs rounded-xl min-h-[60px]"
+            />
+          </div>
 
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    id="is_active_edit"
-                    type="checkbox"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                    className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
-                  />
-                  <label htmlFor="is_active_edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 select-none">
-                    Mark as Active
-                  </label>
-                </div>
-              </CardContent>
-              <div className="flex justify-end items-center gap-2 p-5 border-t border-zinc-100 dark:border-zinc-800">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsEditOpen(false)}
-                  className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md cursor-pointer h-10 px-4 text-xs font-semibold"
-                >
-                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+          <div className="flex items-center gap-2 pt-2">
+            <input
+              id="is_active_edit"
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+            />
+            <label htmlFor="is_active_edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 select-none">
+              Mark as Active
+            </label>
+          </div>
+        </form>
+      </BaseDialog>
 
       {/* Delete Confirmation Modal */}
-      {isDeleteOpen && selectedFranchise && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <Card className="w-full max-w-sm border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-zinc-900 rounded-2xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <CardTitle className="text-sm font-bold flex items-center gap-1.5 text-red-500">
-                <AlertCircle className="w-4 h-4" /> Delete Franchise?
-              </CardTitle>
-              <CardDescription className="text-xs">
-                This will soft delete the franchise. It will no longer show in active listings, but database history is preserved.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-5">
-              <p className="text-xs text-zinc-600 dark:text-zinc-350">
-                Are you sure you want to soft delete the franchise <strong>{selectedFranchise.name}</strong> ({selectedFranchise.code})?
-              </p>
-            </CardContent>
-            <div className="flex justify-end items-center gap-2 p-5 border-t border-zinc-100 dark:border-zinc-800">
-              <Button
-                variant="outline"
-                onClick={() => setIsDeleteOpen(false)}
-                className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleDeleteFranchise}
-                disabled={isSubmitting}
-                className="rounded-xl bg-red-600 hover:bg-red-700 text-white cursor-pointer h-10 px-4 text-xs font-semibold"
-              >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Yes, Delete'}
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+      <BaseConfirmDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        title="Delete Franchise?"
+        description={`This will soft delete the franchise "${selectedFranchise?.name || ''}" (${selectedFranchise?.code || ''}). It will no longer show in active listings, but database history is preserved. Are you sure you want to soft delete this franchise?`}
+        onConfirm={handleDeleteFranchise}
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        isDestructive={true}
+        isLoading={isSubmitting}
+      />
     </div>
   );
 }
