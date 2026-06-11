@@ -54,7 +54,7 @@ export default function Sidebar({ collapsed, onCollapse }: SidebarProps) {
             href: '/dashboard/franchises'
         });
     }
-    if (role === 'ADMIN') {
+    if (role === 'ADMIN' || role === 'REGION_HEAD' || role === 'BRANCH_HEAD') {
         items.push({
             label: 'Users',
             icon: Users,

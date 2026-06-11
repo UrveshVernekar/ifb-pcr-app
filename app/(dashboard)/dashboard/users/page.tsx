@@ -56,11 +56,11 @@ const ROLES = [
   { value: 'REGION_HEAD', label: 'Region Head' },
   { value: 'BRANCH_HEAD', label: 'Branch Head' },
   { value: 'FRANCHISE_HEAD', label: 'Franchise Head' },
-  { value: 'MANAGER', label: 'Manager' },
-  { value: 'OPERATOR', label: 'Operator' },
-  { value: 'QUALITY_INSPECTOR', label: 'Quality Inspector' },
-  { value: 'SAFETY_OFFICER', label: 'Safety Officer' },
-  { value: 'EMPLOYEE', label: 'Employee' },
+  // { value: 'MANAGER', label: 'Manager' },
+  // { value: 'OPERATOR', label: 'Operator' },
+  // { value: 'QUALITY_INSPECTOR', label: 'Quality Inspector' },
+  // { value: 'SAFETY_OFFICER', label: 'Safety Officer' },
+  // { value: 'EMPLOYEE', label: 'Employee' },
 ];
 
 export default function UsersManagementPage() {
@@ -68,10 +68,10 @@ export default function UsersManagementPage() {
   const [regions, setRegions] = useState<Region[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [franchises, setFranchises] = useState<Franchise[]>([]);
-  
+
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Modals
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -89,6 +89,32 @@ export default function UsersManagementPage() {
   const [franchiseId, setFranchiseId] = useState<number | ''>('');
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const dataStr = sessionStorage.getItem('logindata');
+    if (dataStr) {
+      try {
+        const data = JSON.parse(dataStr);
+        setRole(data.role || null);
+      } catch (e) {
+        console.error('Failed to parse user logindata:', e);
+      }
+    }
+  }, []);
+
+  const allowedRoles = useMemo(() => {
+    if (role === 'ADMIN') {
+      return ROLES;
+    }
+    if (role === 'REGION_HEAD') {
+      return ROLES.filter(r => !['ADMIN', 'REGION_HEAD'].includes(r.value));
+    }
+    if (role === 'BRANCH_HEAD') {
+      return ROLES.filter(r => !['ADMIN', 'REGION_HEAD', 'BRANCH_HEAD'].includes(r.value));
+    }
+    return [];
+  }, [role]);
 
   const apiBase = useMemo(() => getApiBaseUrl(), []);
 
@@ -164,10 +190,11 @@ export default function UsersManagementPage() {
     setEmployeeId('');
     setEmail('');
     setPassword('');
-    setRoleSelection('EMPLOYEE');
-    setRegionId('');
-    setBranchId('');
-    setFranchiseId('');
+    const defaultRole = allowedRoles.length > 0 ? allowedRoles[0].value : 'EMPLOYEE';
+    setRoleSelection(defaultRole);
+    setRegionId(regions.length === 1 ? regions[0].region_id : '');
+    setBranchId(branches.length === 1 ? branches[0].branch_id : '');
+    setFranchiseId(franchises.length === 1 ? franchises[0].franchise_id : '');
     setIsActive(true);
     setIsAddOpen(true);
   };
@@ -447,7 +474,7 @@ export default function UsersManagementPage() {
                             onClick={() => openEditModal(user)}
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8 rounded-lg text-zinc-600 hover:text-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                            className="h-8 w-8 rounded-lg text-blue-600 hover:text-blue-900 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-800 cursor-pointer"
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </Button>
@@ -455,7 +482,7 @@ export default function UsersManagementPage() {
                             onClick={() => openDeleteModal(user)}
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/10 border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                            className="h-8 w-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/10 border-red-200 dark:border-red-800 cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
@@ -553,7 +580,7 @@ export default function UsersManagementPage() {
                   <SelectValue placeholder="Select Role" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-[9999] text-xs">
-                  {ROLES.map((r) => (
+                  {allowedRoles.map((r) => (
                     <SelectItem key={r.value} value={r.value} className="rounded-lg cursor-pointer text-xs">{r.label}</SelectItem>
                   ))}
                 </SelectContent>
@@ -565,7 +592,7 @@ export default function UsersManagementPage() {
           {roleSelection === 'REGION_HEAD' && (
             <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
               <label htmlFor="region" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Assigned Region *</label>
-              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
+              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting || regions.length <= 1}>
                 <SelectTrigger id="region" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Region" />
                 </SelectTrigger>
@@ -581,7 +608,7 @@ export default function UsersManagementPage() {
           {roleSelection === 'BRANCH_HEAD' && (
             <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
               <label htmlFor="branch" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Assigned Branch *</label>
-              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
+              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting || branches.length <= 1}>
                 <SelectTrigger id="branch" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Branch" />
                 </SelectTrigger>
@@ -597,7 +624,7 @@ export default function UsersManagementPage() {
           {roleSelection === 'FRANCHISE_HEAD' && (
             <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
               <label htmlFor="franchise" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Assigned Franchise *</label>
-              <Select value={franchiseId === '' ? '' : String(franchiseId)} onValueChange={(val) => setFranchiseId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
+              <Select value={franchiseId === '' ? '' : String(franchiseId)} onValueChange={(val) => setFranchiseId(val === '' ? '' : Number(val))} disabled={isSubmitting || franchises.length <= 1}>
                 <SelectTrigger id="franchise" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Franchise" />
                 </SelectTrigger>
@@ -709,7 +736,7 @@ export default function UsersManagementPage() {
                   <SelectValue placeholder="Select Role" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-[9999] text-xs">
-                  {ROLES.map((r) => (
+                  {allowedRoles.map((r) => (
                     <SelectItem key={r.value} value={r.value} className="rounded-lg cursor-pointer text-xs">{r.label}</SelectItem>
                   ))}
                 </SelectContent>
@@ -721,7 +748,7 @@ export default function UsersManagementPage() {
           {roleSelection === 'REGION_HEAD' && (
             <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
               <label htmlFor="region-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Assigned Region *</label>
-              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
+              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting || regions.length <= 1}>
                 <SelectTrigger id="region-edit" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Region" />
                 </SelectTrigger>
@@ -737,7 +764,7 @@ export default function UsersManagementPage() {
           {roleSelection === 'BRANCH_HEAD' && (
             <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
               <label htmlFor="branch-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Assigned Branch *</label>
-              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
+              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting || branches.length <= 1}>
                 <SelectTrigger id="branch-edit" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Branch" />
                 </SelectTrigger>
@@ -753,7 +780,7 @@ export default function UsersManagementPage() {
           {roleSelection === 'FRANCHISE_HEAD' && (
             <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
               <label htmlFor="franchise-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Assigned Franchise *</label>
-              <Select value={franchiseId === '' ? '' : String(franchiseId)} onValueChange={(val) => setFranchiseId(val === '' ? '' : Number(val))} disabled={isSubmitting}>
+              <Select value={franchiseId === '' ? '' : String(franchiseId)} onValueChange={(val) => setFranchiseId(val === '' ? '' : Number(val))} disabled={isSubmitting || franchises.length <= 1}>
                 <SelectTrigger id="franchise-edit" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Franchise" />
                 </SelectTrigger>
