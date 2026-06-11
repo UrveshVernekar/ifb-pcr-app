@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { BaseDialog } from '@/components/shared/BaseDialog';
+import { BaseConfirmDialog } from '@/components/shared/BaseConfirmDialog';
 import {
   Table,
   TableBody,
@@ -353,209 +355,173 @@ export default function RegionsPage() {
       </Card>
 
       {/* Add Region Modal */}
-      {isAddOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <Card className="w-full max-w-md border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-zinc-900 rounded-2xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="flex flex-row justify-between items-center pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <div>
-                <CardTitle className="text-md font-bold">Add New Region</CardTitle>
-                <CardDescription className="text-xs">Define a geographical region under India.</CardDescription>
-              </div>
-              <button onClick={() => setIsAddOpen(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
-                <X className="w-4 h-4" />
-              </button>
-            </CardHeader>
-            <form onSubmit={handleAddRegion}>
-              <CardContent className="space-y-4 p-5">
-                <div className="space-y-1.5">
-                  <label htmlFor="name" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region Name *</label>
-                  <Input
-                    id="name"
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. West Region"
-                    className="h-10 text-xs rounded-xl"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="code" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region Code</label>
-                  <Input
-                    id="code"
-                    type="text"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="e.g. WR-01"
-                    className="h-10 text-xs rounded-xl"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="description" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Description</label>
-                  <Input
-                    id="description"
-                    type="text"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="e.g. Western states of India"
-                    className="h-10 text-xs rounded-xl"
-                  />
-                </div>
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    id="is_active"
-                    type="checkbox"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                    className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
-                  />
-                  <label htmlFor="is_active" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 select-none">
-                    Mark as Active
-                  </label>
-                </div>
-              </CardContent>
-              <div className="flex justify-end items-center gap-2 p-5 border-t border-zinc-100 dark:border-zinc-800">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAddOpen(false)}
-                  className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md cursor-pointer h-10 px-4 text-xs font-semibold"
-                >
-                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Region'}
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+      <BaseDialog
+        open={isAddOpen}
+        onOpenChange={setIsAddOpen}
+        title="Add New Region"
+        description="Define a geographical region under India."
+        className="sm:max-w-md"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsAddOpen(false)}
+              className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="add-region-form"
+              disabled={isSubmitting}
+              className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md cursor-pointer h-10 px-4 text-xs font-semibold"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Region'}
+            </Button>
+          </>
+        }
+      >
+        <form id="add-region-form" onSubmit={handleAddRegion} className="space-y-4">
+          <div className="space-y-1.5">
+            <label htmlFor="name" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region Name *</label>
+            <Input
+              id="name"
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. West Region"
+              className="h-10 text-xs rounded-xl"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="code" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region Code</label>
+            <Input
+              id="code"
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="e.g. WR-01"
+              className="h-10 text-xs rounded-xl"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="description" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Description</label>
+            <Input
+              id="description"
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Western states of India"
+              className="h-10 text-xs rounded-xl"
+            />
+          </div>
+          <div className="flex items-center gap-2 pt-2">
+            <input
+              id="is_active"
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+            />
+            <label htmlFor="is_active" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 select-none">
+              Mark as Active
+            </label>
+          </div>
+        </form>
+      </BaseDialog>
 
       {/* Edit Region Modal */}
-      {isEditOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <Card className="w-full max-w-md border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-zinc-900 rounded-2xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="flex flex-row justify-between items-center pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <div>
-                <CardTitle className="text-md font-bold">Edit Region</CardTitle>
-                <CardDescription className="text-xs">Modify geographical region details.</CardDescription>
-              </div>
-              <button onClick={() => setIsEditOpen(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
-                <X className="w-4 h-4" />
-              </button>
-            </CardHeader>
-            <form onSubmit={handleUpdateRegion}>
-              <CardContent className="space-y-4 p-5">
-                <div className="space-y-1.5">
-                  <label htmlFor="name-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region Name *</label>
-                  <Input
-                    id="name-edit"
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. West Region"
-                    className="h-10 text-xs rounded-xl"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="code-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region Code</label>
-                  <Input
-                    id="code-edit"
-                    type="text"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="e.g. WR-01"
-                    className="h-10 text-xs rounded-xl"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="description-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Description</label>
-                  <Input
-                    id="description-edit"
-                    type="text"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="e.g. Western states of India"
-                    className="h-10 text-xs rounded-xl"
-                  />
-                </div>
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    id="is_active_edit"
-                    type="checkbox"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                    className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
-                  />
-                  <label htmlFor="is_active_edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 select-none">
-                    Mark as Active
-                  </label>
-                </div>
-              </CardContent>
-              <div className="flex justify-end items-center gap-2 p-5 border-t border-zinc-100 dark:border-zinc-800">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsEditOpen(false)}
-                  className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md cursor-pointer h-10 px-4 text-xs font-semibold"
-                >
-                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+      <BaseDialog
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        title="Edit Region"
+        description="Modify geographical region details."
+        className="sm:max-w-md"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsEditOpen(false)}
+              className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="edit-region-form"
+              disabled={isSubmitting}
+              className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md cursor-pointer h-10 px-4 text-xs font-semibold"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+            </Button>
+          </>
+        }
+      >
+        <form id="edit-region-form" onSubmit={handleUpdateRegion} className="space-y-4">
+          <div className="space-y-1.5">
+            <label htmlFor="name-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region Name *</label>
+            <Input
+              id="name-edit"
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. West Region"
+              className="h-10 text-xs rounded-xl"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="code-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region Code</label>
+            <Input
+              id="code-edit"
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="e.g. WR-01"
+              className="h-10 text-xs rounded-xl"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="description-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Description</label>
+            <Input
+              id="description-edit"
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Western states of India"
+              className="h-10 text-xs rounded-xl"
+            />
+          </div>
+          <div className="flex items-center gap-2 pt-2">
+            <input
+              id="is_active_edit"
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+            />
+            <label htmlFor="is_active_edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 select-none">
+              Mark as Active
+            </label>
+          </div>
+        </form>
+      </BaseDialog>
 
       {/* Delete Confirmation Modal */}
-      {isDeleteOpen && selectedRegion && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <Card className="w-full max-w-sm border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-zinc-900 rounded-2xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <CardTitle className="text-sm font-bold flex items-center gap-1.5 text-red-500">
-                <AlertCircle className="w-4 h-4" /> Delete Region?
-              </CardTitle>
-              <CardDescription className="text-xs">
-                This action is a soft delete. The region will be marked as inactive and soft-deleted, but remains in DB history.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-5">
-              <p className="text-xs text-zinc-600 dark:text-zinc-350">
-                Are you sure you want to soft delete the region <strong>{selectedRegion.name}</strong>?
-              </p>
-            </CardContent>
-            <div className="flex justify-end items-center gap-2 p-5 border-t border-zinc-100 dark:border-zinc-800">
-              <Button
-                variant="outline"
-                onClick={() => setIsDeleteOpen(false)}
-                className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleDeleteRegion}
-                disabled={isSubmitting}
-                className="rounded-xl bg-red-600 hover:bg-red-700 text-white cursor-pointer h-10 px-4 text-xs font-semibold"
-              >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Yes, Delete'}
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+      <BaseConfirmDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        title="Delete Region?"
+        description={`This will soft delete the region "${selectedRegion?.name || ''}". It will no longer show in active listings, but database history is preserved. Are you sure you want to soft delete this region?`}
+        onConfirm={handleDeleteRegion}
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        isDestructive={true}
+        isLoading={isSubmitting}
+      />
     </div>
   );
 }
