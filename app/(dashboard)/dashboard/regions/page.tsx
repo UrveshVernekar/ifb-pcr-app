@@ -1,23 +1,16 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { Map, Plus, Search, Edit, Trash2, Loader2, Check, X, AlertCircle } from 'lucide-react';
+import { Map, Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/auth-client';
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { BaseDialog } from '@/components/shared/BaseDialog';
 import { BaseConfirmDialog } from '@/components/shared/BaseConfirmDialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { BaseTable, Column } from '@/components/shared/BaseTable';
 
 interface Region {
   region_id: number;
@@ -103,6 +96,64 @@ export default function RegionsPage() {
       return nameMatch || codeMatch;
     });
   }, [regions, searchQuery]);
+
+  const columns: Column<Region>[] = useMemo(() => {
+    const cols: Column<Region>[] = [
+      {
+        header: 'Name',
+        className: 'w-1/4 pl-6 font-semibold text-zinc-900 dark:text-zinc-100',
+        render: (region) => region.name,
+      },
+      {
+        header: 'Code',
+        className: 'w-1/6 font-mono text-zinc-650 dark:text-zinc-450',
+        render: (region) => region.code || <span className="text-zinc-400 italic">None</span>,
+      },
+      {
+        header: 'Description',
+        className: 'w-1/3 text-zinc-500 dark:text-zinc-400 max-w-xs truncate',
+        render: (region) => region.description || <span className="text-zinc-400 italic">No description</span>,
+      },
+      {
+        header: 'Status',
+        className: 'w-1/6',
+        render: (region) => (
+          <Badge variant={region.is_active ? 'default' : 'destructive'} className="text-[10px] px-2 py-0.5 rounded-full font-semibold">
+            {region.is_active ? 'Active' : 'Inactive'}
+          </Badge>
+        ),
+      },
+    ];
+
+    if (isAdmin) {
+      cols.push({
+        header: 'Actions',
+        className: 'w-1/6 text-right pr-6',
+        render: (region) => (
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              onClick={() => openEditModal(region)}
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-lg text-blue-600 hover:text-blue-900 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-800 cursor-pointer"
+            >
+              <Edit className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              onClick={() => openDeleteModal(region)}
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/10 border-red-200 dark:border-red-800 cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        ),
+      });
+    }
+
+    return cols;
+  }, [isAdmin]);
 
   const openAddModal = () => {
     setName('');
@@ -283,74 +334,14 @@ export default function RegionsPage() {
         </CardHeader>
 
         <CardContent className="p-0">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-              <span className="text-xs">Loading regions...</span>
-            </div>
-          ) : filteredRegions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-1">
-              <AlertCircle className="w-10 h-10 text-zinc-400 dark:text-zinc-650" />
-              <span className="text-sm font-semibold">No Regions Found</span>
-              <span className="text-xs text-zinc-400">Try modifying your search or add a new region.</span>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-zinc-50/50 dark:bg-zinc-900/30">
-                  <TableRow>
-                    <TableHead className="w-1/4 pl-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Name</TableHead>
-                    <TableHead className="w-1/6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Code</TableHead>
-                    <TableHead className="w-1/3 text-xs font-semibold uppercase tracking-wider text-zinc-500">Description</TableHead>
-                    <TableHead className="w-1/6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Status</TableHead>
-                    {isAdmin && <TableHead className="w-1/6 text-right pr-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Actions</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRegions.map((region) => (
-                    <TableRow key={region.region_id} className="hover:bg-zinc-50/30 dark:hover:bg-zinc-950/10 border-b border-zinc-100 dark:border-zinc-800/80">
-                      <TableCell className="pl-6 py-4 font-semibold text-zinc-900 dark:text-zinc-100 text-xs">
-                        {region.name}
-                      </TableCell>
-                      <TableCell className="py-4 text-xs font-mono text-zinc-600 dark:text-zinc-450">
-                        {region.code || <span className="text-zinc-400 italic">None</span>}
-                      </TableCell>
-                      <TableCell className="py-4 text-xs text-zinc-500 dark:text-zinc-400 max-w-xs truncate">
-                        {region.description || <span className="text-zinc-400 italic">No description</span>}
-                      </TableCell>
-                      <TableCell className="py-4 text-xs">
-                        <Badge variant={region.is_active ? 'default' : 'destructive'} className="text-[10px] px-2 py-0.5 rounded-full font-semibold">
-                          {region.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell className="py-4 text-right pr-6">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              onClick={() => openEditModal(region)}
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 rounded-lg text-blue-600 hover:text-blue-900 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-800 cursor-pointer"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button
-                              onClick={() => openDeleteModal(region)}
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/10 border-red-200 dark:border-red-800 cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <BaseTable
+            columns={columns}
+            data={filteredRegions}
+            loading={loading}
+            emptyTitle="No Regions Found"
+            emptyDescription="Try modifying your search or add a new region."
+            keyExtractor={(region) => region.region_id}
+          />
         </CardContent>
       </Card>
 
