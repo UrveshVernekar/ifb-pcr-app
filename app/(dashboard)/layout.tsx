@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Sidebar from '@/components/shared/Sidebar';
 import Topbar from '@/components/shared/Topbar';
+import { getApiBaseUrl } from '@/lib/auth-client';
 
 export default function DashboardLayout({
     children,
@@ -18,23 +19,61 @@ export default function DashboardLayout({
 
     useEffect(() => {
         const auth = localStorage.getItem('isAuthenticated');
+        const token = localStorage.getItem('accessToken');
         console.log("DashboardLayout useEffect - auth in localStorage:", auth);
-        if (!auth) {
-            console.log("DashboardLayout - NO auth! Redirecting to /login");
+        if (!auth || !token) {
+            console.log("DashboardLayout - NO auth or token! Redirecting to /login");
+            localStorage.removeItem('isAuthenticated');
+            localStorage.removeItem('accessToken');
+            sessionStorage.clear();
             router.replace('/login');
-        } else {
-            console.log("DashboardLayout - authenticated! Setting state...");
-            const timer = setTimeout(() => {
-                setIsAuthenticated(true);
-                const saved = localStorage.getItem('sidebarCollapsed');
-                if (saved !== null) {
-                    setSidebarCollapsed(saved === 'true');
-                } else if (window.innerWidth < 768) {
-                    setSidebarCollapsed(true);
-                }
-            }, 0);
-            return () => clearTimeout(timer);
+            return;
         }
+
+        let isMounted = true;
+
+        const fetchProfile = async () => {
+            try {
+                const apiBase = getApiBaseUrl();
+                const res = await fetch(`${apiBase}/auth/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (!res.ok) {
+                    throw new Error('Unauthorized');
+                }
+                const json = await res.json();
+                if (json.success && isMounted) {
+                    sessionStorage.setItem('logindata', JSON.stringify(json.data));
+                    setIsAuthenticated(true);
+                    
+                    const saved = localStorage.getItem('sidebarCollapsed');
+                    if (saved !== null) {
+                        setSidebarCollapsed(saved === 'true');
+                    } else if (window.innerWidth < 768) {
+                        setSidebarCollapsed(true);
+                    }
+                } else if (isMounted) {
+                    throw new Error('Verification failed');
+                }
+            } catch (error) {
+                console.error('Failed to fetch profile:', error);
+                if (isMounted) {
+                    localStorage.removeItem('isAuthenticated');
+                    localStorage.removeItem('accessToken');
+                    sessionStorage.clear();
+                    router.replace('/login');
+                }
+            }
+        };
+
+        void fetchProfile();
+
+        return () => {
+            isMounted = false;
+        };
     }, [router]);
 
     // Handle screen size responsiveness on mount and resize
