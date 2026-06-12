@@ -80,8 +80,56 @@ const CopyButton = ({ text }: { text: string }) => {
     );
 };
 
+const PartBarcodeItem = ({
+    label,
+    barcode,
+    hasRework,
+    searchedTerm
+}: {
+    label: string;
+    barcode: string;
+    hasRework?: boolean;
+    searchedTerm: string;
+}) => {
+    const isMatched = useMemo(() => {
+        if (!barcode || !searchedTerm) return false;
+        return barcode.trim().toLowerCase() === searchedTerm.trim().toLowerCase();
+    }, [barcode, searchedTerm]);
+
+    return (
+        <div className={`p-2.5 rounded-lg border transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+            isMatched
+                ? 'bg-yellow-500/10 dark:bg-yellow-500/5 border-yellow-500 dark:border-yellow-600 shadow-sm ring-1 ring-yellow-500/50'
+                : 'bg-zinc-50/50 dark:bg-zinc-950/20 border-zinc-150 dark:border-zinc-800/80'
+        }`}>
+            <div className="space-y-0.5 min-w-0">
+                <div className={`text-[10px] font-bold uppercase tracking-wider ${
+                    isMatched ? 'text-yellow-650 dark:text-yellow-400 font-extrabold' : 'text-zinc-400 dark:text-zinc-500'
+                }`}>
+                    {label}
+                </div>
+                <div className="text-xs font-mono font-medium text-zinc-900 dark:text-zinc-100 break-all select-all">
+                    {barcode}
+                </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+                {isMatched && (
+                    <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white dark:bg-yellow-600 dark:text-zinc-100 text-[9px] font-bold px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
+                        <Search className="w-2.5 h-2.5" /> Searched Part
+                    </Badge>
+                )}
+                <CopyButton text={barcode} />
+                {hasRework && (
+                    <Badge variant="outline" className="text-[9px] border-amber-500/30 bg-amber-500/10 text-amber-600 font-semibold px-2 py-0.5 rounded">Reworked</Badge>
+                )}
+            </div>
+        </div>
+    );
+};
+
 export default function ValidationPage() {
     const [searchQuery, setSearchQuery] = useState('');
+    const [searchedTerm, setSearchedTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [historyData, setHistoryData] = useState<ValidationStage[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -134,6 +182,7 @@ export default function ValidationPage() {
                 if (data.length === 0) {
                     setError('No validation history records found for the scanned code.');
                 } else {
+                    setSearchedTerm(term);
                     toast.success(`Fetched validation history successfully`);
                 }
             } else {
@@ -157,6 +206,7 @@ export default function ValidationPage() {
 
     const handleClear = () => {
         setSearchQuery('');
+        setSearchedTerm('');
         setHistoryData([]);
         setError(null);
         setHasSearched(false);
@@ -477,96 +527,54 @@ export default function ValidationPage() {
                                                     {hasComponents ? (
                                                         <div className="space-y-2.5">
                                                             {stage.Part1_Barcode && (
-                                                                <div className="p-2.5 rounded-lg border bg-zinc-50/50 dark:bg-zinc-950/20 border-zinc-150 dark:border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                                                    <div className="space-y-0.5 min-w-0">
-                                                                        <div className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">Part 1 Barcode</div>
-                                                                        <div className="text-xs font-mono font-medium text-zinc-900 dark:text-zinc-100 break-all select-all">
-                                                                            {stage.Part1_Barcode}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                                                                        <CopyButton text={stage.Part1_Barcode} />
-                                                                        {stage.Part1_Barcode_Rework && (
-                                                                            <Badge variant="outline" className="text-[9px] border-amber-500/30 bg-amber-500/10 text-amber-600 font-semibold px-2 py-0.5 rounded">Reworked</Badge>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
+                                                                <PartBarcodeItem
+                                                                    label="Part 1 Barcode"
+                                                                    barcode={stage.Part1_Barcode}
+                                                                    hasRework={!!stage.Part1_Barcode_Rework}
+                                                                    searchedTerm={searchedTerm}
+                                                                />
                                                             )}
 
                                                             {stage.Part1_Barcode_Rework && (
-                                                                <div className="p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-900/30 bg-amber-50/20 dark:bg-amber-950/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                                                    <div className="space-y-0.5 min-w-0">
-                                                                        <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Part 1 Rework Barcode</div>
-                                                                        <div className="text-xs font-mono font-medium text-zinc-900 dark:text-zinc-100 break-all select-all">
-                                                                            {stage.Part1_Barcode_Rework}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                                                                        <CopyButton text={stage.Part1_Barcode_Rework} />
-                                                                    </div>
-                                                                </div>
+                                                                <PartBarcodeItem
+                                                                    label="Part 1 Rework Barcode"
+                                                                    barcode={stage.Part1_Barcode_Rework}
+                                                                    searchedTerm={searchedTerm}
+                                                                />
                                                             )}
 
                                                             {stage.Part2_Barcode && (
-                                                                <div className="p-2.5 rounded-lg border bg-zinc-50/50 dark:bg-zinc-950/20 border-zinc-150 dark:border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                                                    <div className="space-y-0.5 min-w-0">
-                                                                        <div className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">Part 2 Barcode</div>
-                                                                        <div className="text-xs font-mono font-medium text-zinc-900 dark:text-zinc-100 break-all select-all">
-                                                                            {stage.Part2_Barcode}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                                                                        <CopyButton text={stage.Part2_Barcode} />
-                                                                        {stage.Part2_Barcode_Rework && (
-                                                                            <Badge variant="outline" className="text-[9px] border-amber-500/30 bg-amber-500/10 text-amber-600 font-semibold px-2 py-0.5 rounded">Reworked</Badge>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
+                                                                <PartBarcodeItem
+                                                                    label="Part 2 Barcode"
+                                                                    barcode={stage.Part2_Barcode}
+                                                                    hasRework={!!stage.Part2_Barcode_Rework}
+                                                                    searchedTerm={searchedTerm}
+                                                                />
                                                             )}
 
                                                             {stage.Part2_Barcode_Rework && (
-                                                                <div className="p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-900/30 bg-amber-50/20 dark:bg-amber-950/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                                                    <div className="space-y-0.5 min-w-0">
-                                                                        <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Part 2 Rework Barcode</div>
-                                                                        <div className="text-xs font-mono font-medium text-zinc-900 dark:text-zinc-100 break-all select-all">
-                                                                            {stage.Part2_Barcode_Rework}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                                                                        <CopyButton text={stage.Part2_Barcode_Rework} />
-                                                                    </div>
-                                                                </div>
+                                                                <PartBarcodeItem
+                                                                    label="Part 2 Rework Barcode"
+                                                                    barcode={stage.Part2_Barcode_Rework}
+                                                                    searchedTerm={searchedTerm}
+                                                                />
                                                             )}
 
                                                             {stage.Part3_Barcode && (
-                                                                <div className="p-2.5 rounded-lg border bg-zinc-50/50 dark:bg-zinc-950/20 border-zinc-150 dark:border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                                                    <div className="space-y-0.5 min-w-0">
-                                                                        <div className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">Part 3 Barcode</div>
-                                                                        <div className="text-xs font-mono font-medium text-zinc-900 dark:text-zinc-100 break-all select-all">
-                                                                            {stage.Part3_Barcode}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                                                                        <CopyButton text={stage.Part3_Barcode} />
-                                                                        {stage.Part3_Barcode_Rework && (
-                                                                            <Badge variant="outline" className="text-[9px] border-amber-500/30 bg-amber-500/10 text-amber-600 font-semibold px-2 py-0.5 rounded">Reworked</Badge>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
+                                                                <PartBarcodeItem
+                                                                    label="Part 3 Barcode"
+                                                                    barcode={stage.Part3_Barcode}
+                                                                    hasRework={!!stage.Part3_Barcode_Rework}
+                                                                    searchedTerm={searchedTerm}
+                                                                />
                                                             )}
 
                                                             {stage.Part3_Barcode_Rework && (
-                                                                <div className="p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-900/30 bg-amber-50/20 dark:bg-amber-950/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                                                    <div className="space-y-0.5 min-w-0">
-                                                                        <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Part 3 Rework Barcode</div>
-                                                                        <div className="text-xs font-mono font-medium text-zinc-900 dark:text-zinc-100 break-all select-all">
-                                                                            {stage.Part3_Barcode_Rework}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                                                                        <CopyButton text={stage.Part3_Barcode_Rework} />
-                                                                    </div>
-                                                                </div>
+                                                                <PartBarcodeItem
+                                                                    label="Part 3 Rework Barcode"
+                                                                    barcode={stage.Part3_Barcode_Rework}
+                                                                    searchedTerm={searchedTerm}
+                                                                />
                                                             )}
 
                                                         </div>
