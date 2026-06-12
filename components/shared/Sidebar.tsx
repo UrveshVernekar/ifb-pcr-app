@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Home, Factory, ChevronRight, ChevronLeft, Shield, Calendar, Gauge, Wrench, Users, Map, Building2, Store } from 'lucide-react';
+import { Home, Factory, ChevronRight, ChevronLeft, Shield, Calendar, Gauge, Wrench, Users, Map, Building2, Store, CheckCircle } from 'lucide-react';
 import SidebarItem from './SidebarItem';
 import Image from 'next/image';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -52,6 +52,13 @@ export default function Sidebar({ collapsed, onCollapse }: SidebarProps) {
             label: 'Franchises',
             icon: Store,
             href: '/dashboard/franchises'
+        });
+    }
+    if (role === 'ADMIN') {
+        items.push({
+            label: 'Validation',
+            icon: CheckCircle,
+            href: '/dashboard/validation'
         });
     }
     if (role === 'ADMIN' || role === 'REGION_HEAD' || role === 'BRANCH_HEAD') {

@@ -20,9 +20,8 @@ export default function DashboardLayout({
     useEffect(() => {
         const auth = localStorage.getItem('isAuthenticated');
         const token = localStorage.getItem('accessToken');
-        console.log("DashboardLayout useEffect - auth in localStorage:", auth);
+
         if (!auth || !token) {
-            console.log("DashboardLayout - NO auth or token! Redirecting to /login");
             localStorage.removeItem('isAuthenticated');
             localStorage.removeItem('accessToken');
             sessionStorage.clear();
@@ -48,7 +47,7 @@ export default function DashboardLayout({
                 if (json.success && isMounted) {
                     sessionStorage.setItem('logindata', JSON.stringify(json.data));
                     setIsAuthenticated(true);
-                    
+
                     const saved = localStorage.getItem('sidebarCollapsed');
                     if (saved !== null) {
                         setSidebarCollapsed(saved === 'true');
@@ -59,7 +58,6 @@ export default function DashboardLayout({
                     throw new Error('Verification failed');
                 }
             } catch (error) {
-                console.error('Failed to fetch profile:', error);
                 if (isMounted) {
                     localStorage.removeItem('isAuthenticated');
                     localStorage.removeItem('accessToken');
