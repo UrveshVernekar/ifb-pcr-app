@@ -451,7 +451,7 @@ export default function BranchesPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
               <label htmlFor="region" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region *</label>
-              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting || regions.length <= 1}>
+              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting || regions.length === 0}>
                 <SelectTrigger id="region" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Region" />
                 </SelectTrigger>
@@ -585,7 +585,7 @@ export default function BranchesPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
               <label htmlFor="region-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Region *</label>
-              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting || regions.length <= 1}>
+              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting || regions.length === 0}>
                 <SelectTrigger id="region-edit" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select a region" />
                 </SelectTrigger>

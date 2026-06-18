@@ -468,7 +468,7 @@ export default function FranchisesPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
               <label htmlFor="branch" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Linked Branch *</label>
-              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting || branches.length <= 1}>
+              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting || branches.length === 0}>
                 <SelectTrigger id="branch" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Branch" />
                 </SelectTrigger>
@@ -590,7 +590,7 @@ export default function FranchisesPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
               <label htmlFor="branch-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Linked Branch *</label>
-              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting || branches.length <= 1}>
+              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting || branches.length === 0}>
                 <SelectTrigger id="branch-edit" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Branch" />
                 </SelectTrigger>

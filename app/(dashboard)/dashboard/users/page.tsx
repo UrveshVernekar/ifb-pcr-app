@@ -584,7 +584,7 @@ export default function UsersManagementPage() {
           {roleSelection === 'REGION_HEAD' && (
             <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
               <label htmlFor="region" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Assigned Region *</label>
-              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting || regions.length <= 1}>
+              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting || regions.length === 0}>
                 <SelectTrigger id="region" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Region" />
                 </SelectTrigger>
@@ -600,7 +600,7 @@ export default function UsersManagementPage() {
           {roleSelection === 'BRANCH_HEAD' && (
             <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
               <label htmlFor="branch" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Assigned Branch *</label>
-              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting || branches.length <= 1}>
+              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting || branches.length === 0}>
                 <SelectTrigger id="branch" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Branch" />
                 </SelectTrigger>
@@ -616,7 +616,7 @@ export default function UsersManagementPage() {
           {roleSelection === 'FRANCHISE_HEAD' && (
             <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
               <label htmlFor="franchise" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Assigned Franchise *</label>
-              <Select value={franchiseId === '' ? '' : String(franchiseId)} onValueChange={(val) => setFranchiseId(val === '' ? '' : Number(val))} disabled={isSubmitting || franchises.length <= 1}>
+              <Select value={franchiseId === '' ? '' : String(franchiseId)} onValueChange={(val) => setFranchiseId(val === '' ? '' : Number(val))} disabled={isSubmitting || franchises.length === 0}>
                 <SelectTrigger id="franchise" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Franchise" />
                 </SelectTrigger>
@@ -740,7 +740,7 @@ export default function UsersManagementPage() {
           {roleSelection === 'REGION_HEAD' && (
             <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
               <label htmlFor="region-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Assigned Region *</label>
-              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting || regions.length <= 1}>
+              <Select value={regionId === '' ? '' : String(regionId)} onValueChange={(val) => setRegionId(val === '' ? '' : Number(val))} disabled={isSubmitting || regions.length === 0}>
                 <SelectTrigger id="region-edit" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Region" />
                 </SelectTrigger>
@@ -756,7 +756,7 @@ export default function UsersManagementPage() {
           {roleSelection === 'BRANCH_HEAD' && (
             <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
               <label htmlFor="branch-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Assigned Branch *</label>
-              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting || branches.length <= 1}>
+              <Select value={branchId === '' ? '' : String(branchId)} onValueChange={(val) => setBranchId(val === '' ? '' : Number(val))} disabled={isSubmitting || branches.length === 0}>
                 <SelectTrigger id="branch-edit" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Branch" />
                 </SelectTrigger>
@@ -772,7 +772,7 @@ export default function UsersManagementPage() {
           {roleSelection === 'FRANCHISE_HEAD' && (
             <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
               <label htmlFor="franchise-edit" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Assigned Franchise *</label>
-              <Select value={franchiseId === '' ? '' : String(franchiseId)} onValueChange={(val) => setFranchiseId(val === '' ? '' : Number(val))} disabled={isSubmitting || franchises.length <= 1}>
+              <Select value={franchiseId === '' ? '' : String(franchiseId)} onValueChange={(val) => setFranchiseId(val === '' ? '' : Number(val))} disabled={isSubmitting || franchises.length === 0}>
                 <SelectTrigger id="franchise-edit" className="w-full !h-10 rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/35 border-zinc-200 dark:border-zinc-800 text-left justify-between items-center text-xs focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500">
                   <SelectValue placeholder="Select Franchise" />
                 </SelectTrigger>
