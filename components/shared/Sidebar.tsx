@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Home, Factory, ChevronRight, ChevronLeft, Shield, Calendar, Gauge, Wrench, Users, Map, Building2, Store, CheckCircle, Database } from 'lucide-react';
+import { Home, Factory, ChevronRight, ChevronLeft, Shield, ShieldCheck, Calendar, Gauge, Wrench, Users, Map, Building2, Store, CheckCircle, Database } from 'lucide-react';
 import SidebarItem from './SidebarItem';
 import Image from 'next/image';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -66,6 +66,13 @@ export default function Sidebar({ collapsed, onCollapse }: SidebarProps) {
             href: '/dashboard/crm-upload'
         });
     }
+    if (role === 'ADMIN' || role === 'REGION_HEAD' || role === 'BRANCH_HEAD' || role === 'FRANCHISE_HEAD') {
+        items.push({
+            label: 'Physical Verification',
+            icon: ShieldCheck,
+            href: '/dashboard/physical-verification'
+        });
+    }
     if (role === 'ADMIN' || role === 'REGION_HEAD' || role === 'BRANCH_HEAD') {
         items.push({
             label: 'Users',
@@ -73,6 +80,7 @@ export default function Sidebar({ collapsed, onCollapse }: SidebarProps) {
             href: '/dashboard/users'
         });
     }
+
 
     return (
         <TooltipProvider delayDuration={0}>
