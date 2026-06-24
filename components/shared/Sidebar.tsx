@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Home, Factory, ChevronRight, ChevronLeft, Shield, Calendar, Gauge, Wrench, Users, Map, Building2, Store, CheckCircle } from 'lucide-react';
+import { Home, Factory, ChevronRight, ChevronLeft, Shield, Calendar, Gauge, Wrench, Users, Map, Building2, Store, CheckCircle, Database } from 'lucide-react';
 import SidebarItem from './SidebarItem';
 import Image from 'next/image';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -59,6 +59,11 @@ export default function Sidebar({ collapsed, onCollapse }: SidebarProps) {
             label: 'Validation',
             icon: CheckCircle,
             href: '/dashboard/validation'
+        });
+        items.push({
+            label: 'File Upload',
+            icon: Database,
+            href: '/dashboard/crm-upload'
         });
     }
     if (role === 'ADMIN' || role === 'REGION_HEAD' || role === 'BRANCH_HEAD') {
