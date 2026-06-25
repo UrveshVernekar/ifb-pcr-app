@@ -90,8 +90,10 @@ export default function PhysicalVerificationPage() {
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeSearch, setActiveSearch] = useState<string>('');
+  const [ticketQuery, setTicketQuery] = useState<string>('');
+  const [activeTicketQuery, setActiveTicketQuery] = useState<string>('');
+  const [partQuery, setPartQuery] = useState<string>('');
+  const [activePartQuery, setActivePartQuery] = useState<string>('');
 
   // Pagination state
   const [page, setPage] = useState<number>(1);
@@ -186,9 +188,9 @@ export default function PhysicalVerificationPage() {
       const token = localStorage.getItem('accessToken');
       const branchParam = selectedBranchId === 'all' ? '' : selectedBranchId;
       const res = await fetch(
-        `${apiBase}/pcr-data/physical-verification?month=${month}&year=${year}&branchId=${branchParam}&search=${encodeURIComponent(
-          activeSearch
-        )}&page=${page}&limit=${limit}`,
+        `${apiBase}/pcr-data/physical-verification?month=${month}&year=${year}&branchId=${branchParam}&ticketNumber=${encodeURIComponent(
+          activeTicketQuery
+        )}&partCode=${encodeURIComponent(activePartQuery)}&page=${page}&limit=${limit}`,
         {
           method: 'GET',
           headers: {
@@ -220,11 +222,11 @@ export default function PhysicalVerificationPage() {
   // Reset page to 1 when search or dropdown filters change
   useEffect(() => {
     setPage(1);
-  }, [month, year, selectedBranchId, activeSearch]);
+  }, [month, year, selectedBranchId, activeTicketQuery, activePartQuery]);
 
   useEffect(() => {
     void fetchVerificationList();
-  }, [month, year, selectedBranchId, activeSearch, page, limit]);
+  }, [month, year, selectedBranchId, activeTicketQuery, activePartQuery, page, limit]);
 
   // 4. Focus scanner input on load
   useEffect(() => {
@@ -236,12 +238,15 @@ export default function PhysicalVerificationPage() {
   // 5. Submit search
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setActiveSearch(searchQuery);
+    setActiveTicketQuery(ticketQuery);
+    setActivePartQuery(partQuery);
   };
 
   const handleClearSearch = () => {
-    setSearchQuery('');
-    setActiveSearch('');
+    setTicketQuery('');
+    setPartQuery('');
+    setActiveTicketQuery('');
+    setActivePartQuery('');
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
@@ -355,7 +360,7 @@ export default function PhysicalVerificationPage() {
       </div>
 
       {/* Quick Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-card p-5 rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 shadow-md">
+      <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end bg-card p-5 rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 shadow-md">
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5 text-zinc-400" /> Target Year *
@@ -414,39 +419,57 @@ export default function PhysicalVerificationPage() {
           )}
         </div>
 
-        {/* Scan Barcode / Search form */}
-        <form onSubmit={handleSearchSubmit} className="flex gap-2">
-          <div className="relative flex-1">
-            <QrCode className="absolute left-3.5 top-3 w-5 h-5 text-zinc-400" />
+        {/* Ticket ID search field */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
+            <QrCode className="w-3.5 h-3.5 text-zinc-400" /> Ticket ID
+          </label>
+          <div className="relative">
             <Input
               ref={searchInputRef}
               type="text"
-              placeholder="Scan QR or Enter Ticket ID..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-11 h-11 text-xs rounded-xl border bg-zinc-50/50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 focus-visible:ring-2 focus-visible:ring-blue-500 font-mono tracking-wide"
+              placeholder="Enter Ticket ID..."
+              value={ticketQuery}
+              onChange={(e) => setTicketQuery(e.target.value)}
+              className="h-11 text-xs rounded-xl border bg-zinc-50/50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 focus-visible:ring-2 focus-visible:ring-blue-500 font-mono tracking-wide"
             />
           </div>
-          <Button
-            type="submit"
-            size="icon"
-            className="h-11 w-11 shrink-0 rounded-xl bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
-          >
-            <Search className="w-4 h-4" />
-          </Button>
-          {(activeSearch || searchQuery) && (
+        </div>
+
+        {/* Part Code search field with action buttons */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
+            <QrCode className="w-3.5 h-3.5 text-zinc-400" /> Part Code
+          </label>
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              placeholder="Enter Part Code..."
+              value={partQuery}
+              onChange={(e) => setPartQuery(e.target.value)}
+              className="h-11 text-xs rounded-xl border bg-zinc-50/50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 focus-visible:ring-2 focus-visible:ring-blue-500 font-mono tracking-wide"
+            />
             <Button
-              type="button"
-              variant="outline"
+              type="submit"
               size="icon"
-              onClick={handleClearSearch}
-              className="h-11 w-11 shrink-0 rounded-xl cursor-pointer"
+              className="h-11 w-11 shrink-0 rounded-xl bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
             >
-              <RefreshCw className="w-4 h-4" />
+              <Search className="w-4 h-4" />
             </Button>
-          )}
-        </form>
-      </div>
+            {(activeTicketQuery || activePartQuery || ticketQuery || partQuery) && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleClearSearch}
+                className="h-11 w-11 shrink-0 rounded-xl cursor-pointer"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </form>
 
       {/* Summary Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
