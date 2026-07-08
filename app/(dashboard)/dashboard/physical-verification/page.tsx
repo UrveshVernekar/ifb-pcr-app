@@ -18,7 +18,9 @@ import {
   AlertTriangle,
   Info,
   Check,
-  X
+  X,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/auth-client';
 import { toast } from 'sonner';
@@ -116,6 +118,7 @@ export default function PhysicalVerificationPage() {
   const [activeTicketQuery, setActiveTicketQuery] = useState<string>('');
   const [partQuery, setPartQuery] = useState<string>('');
   const [activePartQuery, setActivePartQuery] = useState<string>('');
+  const [activeCardFilter, setActiveCardFilter] = useState<'all' | 'Received' | 'Pending' | 'Not Received' | 'Damaged'>('all');
 
   // Pagination state
   const [page, setPage] = useState<number>(1);
@@ -134,8 +137,66 @@ export default function PhysicalVerificationPage() {
   const [editRemarks, setEditRemarks] = useState<string>('');
   const [savingEdit, setSavingEdit] = useState(false);
 
+  // Export Modal state
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportType, setExportType] = useState<'month' | 'year' | 'day' | 'range'>('month');
+  const [exportMonth, setExportMonth] = useState<number>(new Date().getMonth() + 1);
+  const [exportYear, setExportYear] = useState<number>(new Date().getFullYear());
+  const [exportDate, setExportDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [exportStartDate, setExportStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [exportEndDate, setExportEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [isExporting, setIsExporting] = useState(false);
+
   const apiBase = useMemo(() => getApiBaseUrl(), []);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const branchParam = selectedBranchId === 'all' ? '' : selectedBranchId;
+      const regionParam = selectedRegionId === 'all' ? '' : selectedRegionId;
+
+      let queryParams = `type=${exportType}&branchId=${branchParam}&regionId=${regionParam}`;
+
+      if (exportType === 'month') {
+        queryParams += `&month=${exportMonth}&year=${exportYear}`;
+      } else if (exportType === 'year') {
+        queryParams += `&year=${exportYear}`;
+      } else if (exportType === 'day') {
+        queryParams += `&date=${exportDate}`;
+      } else if (exportType === 'range') {
+        queryParams += `&startDate=${exportStartDate}&endDate=${exportEndDate}`;
+      }
+
+      const res = await fetch(`${apiBase}/pcr-data/export?${queryParams}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error('Export query returned error status code');
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `claims_verification_export_${exportType}_${new Date().toISOString().split('T')[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      toast.success('Excel spreadsheet downloaded successfully');
+      setShowExportModal(false);
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Failed to export data spreadsheet: ' + err.message);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Years helper
   const years = useMemo(() => {
@@ -279,10 +340,21 @@ export default function PhysicalVerificationPage() {
       const branchParam = selectedBranchId === 'all' ? '' : selectedBranchId;
       const regionParam = selectedRegionId === 'all' ? '' : selectedRegionId;
       const franchiseParam = selectedFranchiseId === 'all' ? '' : selectedFranchiseId;
+
+      let statusParam = '';
+      let conditionParam = '';
+      if (activeCardFilter !== 'all') {
+        if (activeCardFilter === 'Damaged') {
+          conditionParam = 'Damaged';
+        } else {
+          statusParam = activeCardFilter;
+        }
+      }
+
       const res = await fetch(
         `${apiBase}/pcr-data/physical-verification?month=${month}&year=${year}&branchId=${branchParam}&regionId=${regionParam}&franchiseId=${franchiseParam}&ticketNumber=${encodeURIComponent(
           activeTicketQuery
-        )}&partCode=${encodeURIComponent(activePartQuery)}&page=${page}&limit=${limit}`,
+        )}&partCode=${encodeURIComponent(activePartQuery)}&page=${page}&limit=${limit}&verificationStatus=${statusParam}&partCondition=${conditionParam}`,
         {
           method: 'GET',
           headers: {
@@ -311,14 +383,14 @@ export default function PhysicalVerificationPage() {
     }
   };
 
-  // Reset page to 1 when search or dropdown filters change
+  // Reset page to 1 when search, dropdown filters, or card status filters change
   useEffect(() => {
     setPage(1);
-  }, [month, year, selectedRegionId, selectedBranchId, selectedFranchiseId, activeTicketQuery, activePartQuery]);
+  }, [month, year, selectedRegionId, selectedBranchId, selectedFranchiseId, activeTicketQuery, activePartQuery, activeCardFilter]);
 
   useEffect(() => {
     void fetchVerificationList();
-  }, [month, year, selectedRegionId, selectedBranchId, selectedFranchiseId, activeTicketQuery, activePartQuery, page, limit]);
+  }, [apiBase, page, limit, month, year, selectedRegionId, selectedBranchId, selectedFranchiseId, activeTicketQuery, activePartQuery, activeCardFilter]);
 
   // 6. Focus scanner input on load
   useEffect(() => {
@@ -339,6 +411,7 @@ export default function PhysicalVerificationPage() {
     setPartQuery('');
     setActiveTicketQuery('');
     setActivePartQuery('');
+    setActiveCardFilter('all');
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
@@ -442,12 +515,17 @@ export default function PhysicalVerificationPage() {
             Manually verify physically received claimed parts against expected Claims PCR claim records.
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-sm">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          SCANNER ACTIVE
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            onClick={() => {
+              setExportMonth(month);
+              setExportYear(year);
+              setShowExportModal(true);
+            }}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer shadow-md flex items-center gap-1.5 border-0"
+          >
+            <Download className="w-4 h-4" /> Export Excel
+          </Button>
         </div>
       </div>
 
@@ -642,9 +720,18 @@ export default function PhysicalVerificationPage() {
       {/* Summary Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {/* Total Claims */}
-        <Card className="border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm bg-white dark:bg-zinc-900/50 rounded-2xl">
+        <Card
+          onClick={() => setActiveCardFilter('all')}
+          className={`border cursor-pointer hover:shadow-md transition-all rounded-2xl select-none ${activeCardFilter === 'all'
+              ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/5 dark:bg-blue-950/10'
+              : 'border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/50'
+            }`}
+        >
           <CardContent className="p-5 flex flex-col justify-between h-24">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Total claimed claim items</div>
+            <div className="text-[10px] uppercase font-bold tracking-wider text-zinc-450 flex justify-between items-center">
+              <span>Total claimed items</span>
+              {activeCardFilter === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+            </div>
             <div className="text-2xl font-black text-zinc-900 dark:text-zinc-50">
               {loadingData ? <Loader2 className="w-5 h-5 animate-spin text-zinc-400" /> : summary.total}
             </div>
@@ -652,40 +739,76 @@ export default function PhysicalVerificationPage() {
         </Card>
 
         {/* Received */}
-        <Card className="border border-emerald-200/50 dark:border-emerald-950/30 shadow-sm bg-emerald-50/[0.15] dark:bg-emerald-950/[0.05] rounded-2xl">
+        <Card
+          onClick={() => setActiveCardFilter(activeCardFilter === 'Received' ? 'all' : 'Received')}
+          className={`border cursor-pointer hover:shadow-md transition-all rounded-2xl select-none ${activeCardFilter === 'Received'
+              ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/10 dark:bg-emerald-950/10'
+              : 'border-emerald-200/50 dark:border-emerald-950/30 bg-emerald-50/[0.15] dark:bg-emerald-950/[0.05]'
+            }`}
+        >
           <CardContent className="p-5 flex flex-col justify-between h-24">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400">Received physically</div>
-            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-455 flex justify-between items-center">
+              <span>Received physically</span>
+              {activeCardFilter === 'Received' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+            </div>
+            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-450">
               {loadingData ? <Loader2 className="w-5 h-5 animate-spin text-zinc-400" /> : summary.received}
             </div>
           </CardContent>
         </Card>
 
         {/* Pending */}
-        <Card className="border border-amber-200/50 dark:border-amber-950/30 shadow-sm bg-amber-50/[0.15] dark:bg-amber-950/[0.05] rounded-2xl">
+        <Card
+          onClick={() => setActiveCardFilter(activeCardFilter === 'Pending' ? 'all' : 'Pending')}
+          className={`border cursor-pointer hover:shadow-md transition-all rounded-2xl select-none ${activeCardFilter === 'Pending'
+              ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-50/10 dark:bg-amber-955/10'
+              : 'border-amber-200/50 dark:border-amber-950/30 bg-amber-50/[0.15] dark:bg-amber-950/[0.05]'
+            }`}
+        >
           <CardContent className="p-5 flex flex-col justify-between h-24">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-amber-600 dark:text-amber-400">Pending verification</div>
-            <div className="text-2xl font-black text-amber-600 dark:text-amber-400">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-amber-600 dark:text-amber-455 flex justify-between items-center">
+              <span>Pending verification</span>
+              {activeCardFilter === 'Pending' && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
+            </div>
+            <div className="text-2xl font-black text-amber-600 dark:text-amber-450">
               {loadingData ? <Loader2 className="w-5 h-5 animate-spin text-zinc-400" /> : summary.pending}
             </div>
           </CardContent>
         </Card>
 
         {/* Not Received */}
-        <Card className="border border-red-200/50 dark:border-red-950/30 shadow-sm bg-red-50/[0.15] dark:bg-red-950/[0.05] rounded-2xl">
+        <Card
+          onClick={() => setActiveCardFilter(activeCardFilter === 'Not Received' ? 'all' : 'Not Received')}
+          className={`border cursor-pointer hover:shadow-md transition-all rounded-2xl select-none ${activeCardFilter === 'Not Received'
+              ? 'ring-2 ring-red-500 border-red-500 bg-red-50/10 dark:bg-red-955/10'
+              : 'border-red-200/50 dark:border-red-950/30 bg-red-50/[0.15] dark:bg-red-950/[0.05]'
+            }`}
+        >
           <CardContent className="p-5 flex flex-col justify-between h-24">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-red-600 dark:text-red-400">Not received</div>
-            <div className="text-2xl font-black text-red-600 dark:text-red-400">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-red-650 dark:text-red-455 flex justify-between items-center">
+              <span>Not received</span>
+              {activeCardFilter === 'Not Received' && <span className="w-1.5 h-1.5 rounded-full bg-red-500" />}
+            </div>
+            <div className="text-2xl font-black text-red-600 dark:text-red-450">
               {loadingData ? <Loader2 className="w-5 h-5 animate-spin text-zinc-400" /> : summary.notReceived}
             </div>
           </CardContent>
         </Card>
 
         {/* Damaged */}
-        <Card className="border border-yellow-250/50 dark:border-yellow-900/30 shadow-sm bg-yellow-50/[0.15] dark:bg-yellow-950/[0.05] rounded-2xl col-span-2 md:col-span-1">
+        <Card
+          onClick={() => setActiveCardFilter(activeCardFilter === 'Damaged' ? 'all' : 'Damaged')}
+          className={`border cursor-pointer hover:shadow-md transition-all rounded-2xl select-none col-span-2 md:col-span-1 ${activeCardFilter === 'Damaged'
+              ? 'ring-2 ring-yellow-500 border-yellow-500 bg-yellow-50/10 dark:bg-yellow-955/10'
+              : 'border-yellow-250/50 dark:border-yellow-900/30 bg-yellow-50/[0.15] dark:bg-yellow-950/[0.05]'
+            }`}
+        >
           <CardContent className="p-5 flex flex-col justify-between h-24">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-yellow-600 dark:text-yellow-450">Damaged Claims</div>
-            <div className="text-2xl font-black text-yellow-600 dark:text-yellow-450">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-yellow-600 dark:text-yellow-450 flex justify-between items-center">
+              <span>Damaged Claims</span>
+              {activeCardFilter === 'Damaged' && <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />}
+            </div>
+            <div className="text-2xl font-black text-yellow-600 dark:text-yellow-455">
               {loadingData ? <Loader2 className="w-5 h-5 animate-spin text-zinc-400" /> : summary.damaged}
             </div>
           </CardContent>
@@ -745,7 +868,7 @@ export default function PhysicalVerificationPage() {
                         <TableHead className="w-[50px] text-center font-bold">S.No</TableHead>
                         <TableHead className="font-bold">Ticket ID</TableHead>
                         <TableHead className="font-bold">Part Code</TableHead>
-                        <TableHead className="font-bold">Part Name</TableHead>
+                        <TableHead className="font-bold">Part Description</TableHead>
                         <TableHead className="font-bold">Branch</TableHead>
                         <TableHead className="font-bold">Warranty Details</TableHead>
                         <TableHead className="text-center font-bold">Expected Qty</TableHead>
@@ -1084,6 +1207,174 @@ export default function PhysicalVerificationPage() {
               >
                 {savingEdit ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
                 Save Photo & Status
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Export Options Dialog */}
+      {showExportModal && (
+        <Dialog open={showExportModal} onOpenChange={(open) => !open && setShowExportModal(false)}>
+          <DialogContent className="max-w-md rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 shadow-xl overflow-hidden p-0">
+            <DialogHeader className="p-6 pb-4 border-b border-zinc-100 dark:border-zinc-850 bg-zinc-50/50 dark:bg-zinc-950/25">
+              <DialogTitle className="text-base font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-emerald-600" /> Export Verification Data
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-1">
+                Configure your export criteria and download an Excel spreadsheet format.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="p-6 space-y-4">
+              {/* Export Type Tabs */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-650 dark:text-zinc-300">Export Scope / Filter Type</label>
+                <div className="grid grid-cols-4 gap-1.5 bg-zinc-100/70 dark:bg-zinc-900 p-1 rounded-xl shadow-inner border border-zinc-200/20">
+                  {([
+                    { value: 'month', label: 'Month' },
+                    { value: 'year', label: 'Year' },
+                    { value: 'day', label: 'Day' },
+                    { value: 'range', label: 'Range' }
+                  ] as const).map((t) => (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => setExportType(t.value)}
+                      className={`py-2 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                        exportType === t.value
+                          ? 'bg-white dark:bg-zinc-950 text-emerald-600 dark:text-emerald-400 shadow-sm border border-zinc-200/30 dark:border-zinc-855'
+                          : 'text-zinc-500 hover:text-zinc-700'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Month Selection option */}
+              {exportType === 'month' && (
+                <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-200">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-zinc-600 uppercase">Month</label>
+                    <select
+                      value={exportMonth}
+                      onChange={(e) => setExportMonth(Number(e.target.value))}
+                      className="w-full h-10 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-semibold"
+                    >
+                      {months.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-zinc-600 uppercase">Year</label>
+                    <select
+                      value={exportYear}
+                      onChange={(e) => setExportYear(Number(e.target.value))}
+                      className="w-full h-10 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-semibold"
+                    >
+                      {years.map((y) => (
+                        <option key={y} value={y}>
+                          {y}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Year Selection option */}
+              {exportType === 'year' && (
+                <div className="space-y-1.5 animate-in fade-in duration-200">
+                  <label className="text-[10px] font-bold text-zinc-600 uppercase">Select Year</label>
+                  <select
+                    value={exportYear}
+                    onChange={(e) => setExportYear(Number(e.target.value))}
+                    className="w-full h-10 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-semibold"
+                  >
+                    {years.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Day Selection option */}
+              {exportType === 'day' && (
+                <div className="space-y-1.5 animate-in fade-in duration-200">
+                  <label className="text-[10px] font-bold text-zinc-600 uppercase">Select Verification Date</label>
+                  <input
+                    type="date"
+                    value={exportDate}
+                    onChange={(e) => setExportDate(e.target.value)}
+                    className="w-full h-10 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-semibold"
+                  />
+                </div>
+              )}
+
+              {/* Date Range Selection option */}
+              {exportType === 'range' && (
+                <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-200">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-zinc-600 uppercase">Start Date</label>
+                    <input
+                      type="date"
+                      value={exportStartDate}
+                      onChange={(e) => setExportStartDate(e.target.value)}
+                      className="w-full h-10 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-semibold"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-zinc-600 uppercase">End Date</label>
+                    <input
+                      type="date"
+                      value={exportEndDate}
+                      onChange={(e) => setExportEndDate(e.target.value)}
+                      className="w-full h-10 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-semibold"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Inherited scopes info note */}
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 rounded-xl border border-dashed border-zinc-200/60 dark:border-zinc-800 text-[10px] leading-normal flex items-start gap-2 select-none">
+                <Info className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-extrabold text-zinc-800 dark:text-zinc-200">Export Scope:</span> Applying geographic filters matching current page dropdown selectors (
+                  {selectedBranchId !== 'all' ? (
+                    <strong>Branch: {branches.find(b => String(b.branch_id) === selectedBranchId)?.name}</strong>
+                  ) : selectedRegionId !== 'all' ? (
+                    <strong>Region: {regions.find(r => String(r.region_id) === selectedRegionId)?.name}</strong>
+                  ) : (
+                    <strong>National System View</strong>
+                  )}
+                  ).
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="p-6 pt-4 border-t border-zinc-100 dark:border-zinc-850 bg-zinc-50/50 dark:bg-zinc-950/25 flex items-center justify-end gap-2.5">
+              <Button
+                variant="outline"
+                onClick={() => setShowExportModal(false)}
+                disabled={isExporting}
+                className="h-10 px-5 text-xs font-bold rounded-xl cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleExport}
+                disabled={isExporting}
+                className="h-10 px-6 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white cursor-pointer shadow-md"
+              >
+                {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
+                Download Spreadsheet
               </Button>
             </DialogFooter>
           </DialogContent>
