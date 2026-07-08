@@ -6,6 +6,7 @@ import { getApiBaseUrl } from '@/lib/auth-client';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import * as XLSX from 'xlsx';
 
 interface Branch {
   branch_id: number;
@@ -13,6 +14,18 @@ interface Branch {
   name: string;
   code: string | null;
   is_active: boolean;
+}
+
+interface FilePreview {
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  lastModified: string;
+  sheetNames: string[];
+  selectedSheet: string;
+  headers: string[];
+  rows: any[];
+  totalRows: number;
 }
 
 export default function CRMUploadPage() {
@@ -31,6 +44,11 @@ export default function CRMUploadPage() {
   // File states
   const [crmFile, setCrmFile] = useState<File | null>(null);
   const [pcrFile, setPcrFile] = useState<File | null>(null);
+
+  // Preview states
+  const [crmPreview, setCrmPreview] = useState<FilePreview | null>(null);
+  const [pcrPreview, setPcrPreview] = useState<FilePreview | null>(null);
+  const [parsingFile, setParsingFile] = useState(false);
 
   // Upload/Progress states
   const [isUploading, setIsUploading] = useState(false);
@@ -145,6 +163,60 @@ export default function CRMUploadPage() {
     }
   };
 
+  const parseExcelPreview = (file: File, callback: (preview: FilePreview) => void) => {
+    setParsingFile(true);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        if (!data) throw new Error('File data is empty');
+        
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        
+        // Convert to JSON
+        const rawRows = XLSX.utils.sheet_to_json<any>(sheet, { header: 1, defval: '' });
+        
+        if (rawRows.length === 0) {
+          toast.error('Excel file sheet seems empty');
+          setParsingFile(false);
+          return;
+        }
+
+        const headers = (rawRows[0] || []).map((h: any) => String(h).trim());
+        const dataRows = rawRows.slice(1).filter((r: any[]) => r.some((cell) => cell !== ''));
+        
+        // Format preview rows as key-value objects
+        const previewRows = dataRows.slice(0, 5).map((row: any[]) => {
+          const obj: { [key: string]: any } = {};
+          headers.forEach((h: string, idx: number) => {
+            obj[h] = row[idx] !== undefined ? String(row[idx]).trim() : '';
+          });
+          return obj;
+        });
+
+        callback({
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type || 'application/vnd.ms-excel',
+          lastModified: new Date(file.lastModified).toLocaleString('en-IN'),
+          sheetNames: workbook.SheetNames,
+          selectedSheet: sheetName,
+          headers,
+          rows: previewRows,
+          totalRows: dataRows.length
+        });
+      } catch (err: any) {
+        console.error(err);
+        toast.error(`Failed to parse spreadsheet preview: ${err.message}`);
+      } finally {
+        setParsingFile(false);
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
   const validateAndSetFile = (selectedFile: File) => {
     const extension = selectedFile.name.split('.').pop()?.toLowerCase();
     if (extension !== 'xlsx' && extension !== 'xls') {
@@ -154,9 +226,11 @@ export default function CRMUploadPage() {
     if (activeTab === 'crm') {
       setCrmFile(selectedFile);
       setCrmResult(null);
+      parseExcelPreview(selectedFile, setCrmPreview);
     } else {
       setPcrFile(selectedFile);
       setPcrResult(null);
+      parseExcelPreview(selectedFile, setPcrPreview);
     }
   };
 
@@ -464,27 +538,102 @@ export default function CRMUploadPage() {
 
                 <label
                   htmlFor="file-upload-input"
-                  className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 min-h-[220px] ${
+                  className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 min-h-[220px] ${
                     dragActive
                       ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/10'
                       : (activeTab === 'crm' ? crmFile : pcrFile)
-                      ? 'border-emerald-500 bg-emerald-50/10 dark:bg-emerald-950/5'
+                      ? 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/5 dark:bg-zinc-900/5'
                       : 'border-zinc-200 dark:border-zinc-800 hover:border-blue-400 hover:bg-zinc-50/50 dark:hover:bg-zinc-950/20'
                   }`}
                 >
                   {(activeTab === 'crm' ? crmFile : pcrFile) ? (
-                    <div className="space-y-3">
-                      <div className="p-3 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-full inline-block">
-                        <FileSpreadsheet className="w-10 h-10" />
+                    <div className="w-full space-y-4 text-left animate-in fade-in duration-300">
+                      {/* Meta Card */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/25 text-xs">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                            <FileSpreadsheet className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="font-extrabold text-zinc-950 dark:text-zinc-50 truncate max-w-xs md:max-w-md">
+                              {activeTab === 'crm' ? crmFile?.name : pcrFile?.name}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
+                              {(((activeTab === 'crm' ? crmFile?.size : pcrFile?.size) || 0) / (1024 * 1024)).toFixed(2)} MB • Excel Spreadsheet
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-[10px] text-zinc-500 uppercase font-bold bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-850 px-2.5 py-1 rounded-full shrink-0">
+                          Ready to Upload
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-zinc-950 dark:text-zinc-50 max-w-md truncate">
-                          {activeTab === 'crm' ? crmFile?.name : pcrFile?.name}
-                        </p>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          {(((activeTab === 'crm' ? crmFile?.size : pcrFile?.size) || 0) / (1024 * 1024)).toFixed(2)} MB • Ready to submit
-                        </p>
-                      </div>
+
+                      {/* Spreadsheet Preview Detail Block */}
+                      {parsingFile ? (
+                        <div className="p-8 border border-zinc-200/50 dark:border-zinc-800/40 rounded-xl border-dashed bg-zinc-50/20 dark:bg-zinc-950/20 flex flex-col items-center justify-center gap-2">
+                          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                          <p className="text-[10px] text-muted-foreground font-semibold">Reading spreadsheet structures...</p>
+                        </div>
+                      ) : (activeTab === 'crm' ? crmPreview : pcrPreview) ? (
+                        <div className="space-y-3">
+                          {/* Brief stats */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[10px] uppercase font-bold text-zinc-400 bg-zinc-50/50 dark:bg-zinc-950/30 p-3 rounded-lg border border-zinc-200/50 dark:border-zinc-800/30">
+                            <div className="space-y-0.5">
+                              <div>Record Count</div>
+                              <div className="text-xs text-zinc-800 dark:text-zinc-200 font-extrabold">{(activeTab === 'crm' ? crmPreview : pcrPreview)?.totalRows.toLocaleString()} rows</div>
+                            </div>
+                            <div className="space-y-0.5">
+                              <div>Sheet Count</div>
+                              <div className="text-xs text-zinc-800 dark:text-zinc-200 font-extrabold">{(activeTab === 'crm' ? crmPreview : pcrPreview)?.sheetNames.length} sheets</div>
+                            </div>
+                            <div className="space-y-0.5">
+                              <div>Active Sheet</div>
+                              <div className="text-xs text-zinc-800 dark:text-zinc-200 font-extrabold truncate" title={(activeTab === 'crm' ? crmPreview : pcrPreview)?.selectedSheet}>
+                                {(activeTab === 'crm' ? crmPreview : pcrPreview)?.selectedSheet}
+                              </div>
+                            </div>
+                            <div className="space-y-0.5">
+                              <div>Last Modified</div>
+                              <div className="text-[9px] text-zinc-800 dark:text-zinc-200 font-mono tracking-tight font-extrabold truncate">
+                                {(activeTab === 'crm' ? crmPreview : pcrPreview)?.lastModified}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Data Preview Table */}
+                          <div className="space-y-1.5">
+                            <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Spreadsheet Headers & Rows Preview (First 5 Rows)</div>
+                            <div className="border border-zinc-200/60 dark:border-zinc-800/60 rounded-xl bg-white dark:bg-zinc-950 overflow-hidden shadow-inner">
+                              <div className="overflow-x-auto max-h-[160px]">
+                                <table className="w-full text-left border-collapse text-[10px]">
+                                  <thead>
+                                    <tr className="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200/50 dark:border-zinc-800/50 font-bold">
+                                      <th className="p-2 border-r border-zinc-200/20 shrink-0 text-center font-bold">#</th>
+                                      {(activeTab === 'crm' ? crmPreview : pcrPreview)?.headers.map((h, i) => (
+                                        <th key={i} className="p-2 font-bold whitespace-nowrap border-r border-zinc-200/20 last:border-r-0 uppercase tracking-wide">
+                                          {h}
+                                        </th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {(activeTab === 'crm' ? crmPreview : pcrPreview)?.rows.map((row, idx) => (
+                                      <tr key={idx} className="hover:bg-zinc-50/40 dark:hover:bg-zinc-900/30 border-b border-zinc-100 dark:border-zinc-900/50 last:border-b-0">
+                                        <td className="p-2 border-r border-zinc-200/20 text-center font-semibold text-zinc-400">{idx + 1}</td>
+                                        {(activeTab === 'crm' ? crmPreview : pcrPreview)?.headers.map((h, i) => (
+                                          <td key={i} className="p-2 border-r border-zinc-200/20 last:border-r-0 truncate max-w-[120px] font-medium" title={row[h]}>
+                                            {row[h]}
+                                          </td>
+                                        ))}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -543,8 +692,13 @@ export default function CRMUploadPage() {
                       type="button"
                       variant="outline"
                       onClick={() => {
-                        if (activeTab === 'crm') setCrmFile(null);
-                        else setPcrFile(null);
+                        if (activeTab === 'crm') {
+                          setCrmFile(null);
+                          setCrmPreview(null);
+                        } else {
+                          setPcrFile(null);
+                          setPcrPreview(null);
+                        }
                       }}
                       disabled={isUploading}
                       className="rounded-xl h-10 px-4 text-xs font-semibold cursor-pointer"

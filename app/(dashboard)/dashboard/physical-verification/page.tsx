@@ -762,7 +762,9 @@ export default function PhysicalVerificationPage() {
 
                         return (
                           <TableRow key={part.pcr_data_id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/30 border-b border-zinc-150 dark:border-zinc-850">
-                            <TableCell className="text-center font-medium text-zinc-400">{idx + 1}</TableCell>
+                            <TableCell className="text-center font-medium text-zinc-400">
+                              {(page - 1) * limit + idx + 1}
+                            </TableCell>
                             <TableCell className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
                               {part.ticket_id}
                             </TableCell>
