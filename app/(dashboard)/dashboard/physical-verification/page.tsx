@@ -20,7 +20,8 @@ import {
   Check,
   X,
   Download,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye
 } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/auth-client';
 import { toast } from 'sonner';
@@ -146,6 +147,9 @@ export default function PhysicalVerificationPage() {
   const [exportStartDate, setExportStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [exportEndDate, setExportEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isExporting, setIsExporting] = useState(false);
+  
+  // Touch/View Details Modal state (for damaged parts)
+  const [viewingDamagedPart, setViewingDamagedPart] = useState<PartClaim | null>(null);
 
   const apiBase = useMemo(() => getApiBaseUrl(), []);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -929,15 +933,19 @@ export default function PhysicalVerificationPage() {
                             </TableCell>
                             <TableCell className="text-center font-bold">
                               {part.part_condition === 'Damaged' ? (
-                                <span className="text-yellow-600 dark:text-yellow-450 bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded font-black text-[9px]">
-                                  Damaged
+                                <span
+                                  onClick={() => setViewingDamagedPart(part)}
+                                  className="text-yellow-650 dark:text-yellow-450 bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded font-black text-[9px] cursor-pointer hover:bg-yellow-500/25 transition-all select-none flex items-center gap-1 inline-flex"
+                                  title="Touch or click to view damage details"
+                                >
+                                  <Eye className="w-2.5 h-2.5" /> Damaged
                                 </span>
                               ) : part.part_condition === 'OK' ? (
-                                <span className="text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded font-black text-[9px]">
+                                <span className="text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded font-black text-[9px] select-none">
                                   OK
                                 </span>
                               ) : (
-                                <span className="text-zinc-400">-</span>
+                                <span className="text-zinc-400 select-none">-</span>
                               )}
                             </TableCell>
                             <TableCell className="text-center">
@@ -1375,6 +1383,57 @@ export default function PhysicalVerificationPage() {
               >
                 {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
                 Download Spreadsheet
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+      {/* Damage Details Touch/View Dialog */}
+      {viewingDamagedPart && (
+        <Dialog open={!!viewingDamagedPart} onOpenChange={(open) => !open && setViewingDamagedPart(null)}>
+          <DialogContent className="max-w-md rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 shadow-xl overflow-hidden p-0">
+            <DialogHeader className="p-6 pb-4 border-b border-zinc-100 dark:border-zinc-850 bg-zinc-50/50 dark:bg-zinc-950/25">
+              <DialogTitle className="text-base font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-yellow-500" /> Damage Verification Details
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground font-mono mt-1">
+                Ticket: {viewingDamagedPart.ticket_id} • Part: {viewingDamagedPart.part_code}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div className="space-y-1">
+                <span className="font-bold text-zinc-400 uppercase text-[9px]">Part Description</span>
+                <p className="text-zinc-800 dark:text-zinc-200 font-semibold">{viewingDamagedPart.part_description}</p>
+              </div>
+
+              <div className="space-y-1">
+                <span className="font-bold text-zinc-400 uppercase text-[9px]">Operator Remarks / Damage Details</span>
+                <div className="p-3 bg-red-50/40 dark:bg-red-950/10 border border-red-100/40 dark:border-red-900/30 rounded-xl text-red-900 dark:text-red-300 font-medium leading-relaxed break-words">
+                  {viewingDamagedPart.remarks || "No comments entered by operator."}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-zinc-100 dark:border-zinc-900">
+                <div className="space-y-1">
+                  <span className="font-bold text-zinc-400 uppercase text-[9px]">Verified By</span>
+                  <p className="text-zinc-850 dark:text-zinc-200 font-bold">{viewingDamagedPart.verified_by_name || "Unknown Operator"}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-bold text-zinc-400 uppercase text-[9px]">Verified At</span>
+                  <p className="text-zinc-850 dark:text-zinc-200 font-bold">
+                    {viewingDamagedPart.verified_at ? new Date(viewingDamagedPart.verified_at).toLocaleString('en-IN') : "-"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="p-6 pt-4 border-t border-zinc-100 dark:border-zinc-850 bg-zinc-50/50 dark:bg-zinc-950/25">
+              <Button
+                onClick={() => setViewingDamagedPart(null)}
+                className="w-full h-10 text-xs font-bold rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white cursor-pointer shadow-md border-0"
+              >
+                Close Details
               </Button>
             </DialogFooter>
           </DialogContent>
