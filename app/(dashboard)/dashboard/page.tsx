@@ -8,15 +8,13 @@ import {
   Building2,
   Clock,
   Database,
-  FileSpreadsheet,
-  Activity,
-  ChevronDown,
-  ChevronUp,
   Loader2,
   RefreshCw,
-  Info
+  ChevronDown,
+  ChevronUp,
+  Inbox
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -25,6 +23,7 @@ import { getApiBaseUrl } from '@/lib/auth-client';
 interface BranchUpload {
   branchId: number;
   branchName: string;
+  regionId?: number;
   uploaded: boolean;
   recordCount: number;
   uploadedAt: string | null;
@@ -48,6 +47,17 @@ interface MonthlyUploadStatus {
   };
 }
 
+interface Region {
+  region_id: number;
+  name: string;
+}
+
+interface Branch {
+  branch_id: number;
+  region_id: number;
+  name: string;
+}
+
 const MONTH_NAMES = [
   '', 'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
@@ -57,8 +67,21 @@ export default function DashboardPage() {
   const [data, setData] = useState<MonthlyUploadStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedMonths, setExpandedMonths] = useState<string[]>([]);
+  
+  // Geographic and temporal filter states
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedRegionId, setSelectedRegionId] = useState<string>('all');
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  
+  const [loadingRegions, setLoadingRegions] = useState(false);
+  const [loadingBranches, setLoadingBranches] = useState(false);
+
   const apiBase = useMemo(() => getApiBaseUrl(), []);
 
+  // Fetch status logs
   const fetchUploadStatus = async () => {
     setLoading(true);
     try {
@@ -83,8 +106,41 @@ export default function DashboardPage() {
     }
   };
 
+  // Fetch geographic dropdown details
+  const fetchRegionsAndBranches = async () => {
+    setLoadingRegions(true);
+    setLoadingBranches(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const [regionsRes, branchesRes] = await Promise.all([
+        fetch(`${apiBase}/regions`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch(`${apiBase}/branches`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+
+      const regionsJson = await regionsRes.json();
+      const branchesJson = await branchesRes.json();
+
+      if (regionsJson.success) {
+        setRegions(regionsJson.data || []);
+      }
+      if (branchesJson.success) {
+        setBranches(branchesJson.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching filters data:', err);
+    } finally {
+      setLoadingRegions(false);
+      setLoadingBranches(false);
+    }
+  };
+
   useEffect(() => {
     void fetchUploadStatus();
+    void fetchRegionsAndBranches();
   }, [apiBase]);
 
   const toggleMonth = (key: string) => {
@@ -93,48 +149,127 @@ export default function DashboardPage() {
     );
   };
 
-  // Group data by year
+  // Filter branch dropdown options based on selected region
+  const filteredBranchDropdownOptions = useMemo(() => {
+    if (selectedRegionId === 'all') return branches;
+    return branches.filter((b) => String(b.region_id) === selectedRegionId);
+  }, [branches, selectedRegionId]);
+
+  // Extract unique years present in the database logs dynamically
+  const uniqueYears = useMemo(() => {
+    const yearsSet = new Set<number>();
+    data.forEach((d) => yearsSet.add(d.year));
+    return Array.from(yearsSet).sort((a, b) => b - a); // Sort descending
+  }, [data]);
+
+  // Static list of months for selection
+  const filterMonthOptions = useMemo(() => {
+    return [
+      { value: '1', label: 'January' },
+      { value: '2', label: 'February' },
+      { value: '3', label: 'March' },
+      { value: '4', label: 'April' },
+      { value: '5', label: 'May' },
+      { value: '6', label: 'June' },
+      { value: '7', label: 'July' },
+      { value: '8', label: 'August' },
+      { value: '9', label: 'September' },
+      { value: '10', label: 'October' },
+      { value: '11', label: 'November' },
+      { value: '12', label: 'December' }
+    ];
+  }, []);
+
+  // Recalculate status logs dynamically based on active filters
+  const filteredData = useMemo(() => {
+    let result = data;
+
+    // Apply Year Filter
+    if (selectedYear !== 'all') {
+      result = result.filter((d) => String(d.year) === selectedYear);
+    }
+    // Apply Month Filter
+    if (selectedMonth !== 'all') {
+      result = result.filter((d) => String(d.month) === selectedMonth);
+    }
+
+    return result.map((monthRecord) => {
+      let filteredBranches = monthRecord.pcr.branchesDetail;
+
+      // Apply Branch/Region filters
+      if (selectedBranchId !== 'all') {
+        filteredBranches = filteredBranches.filter((b) => String(b.branchId) === selectedBranchId);
+      } else if (selectedRegionId !== 'all') {
+        filteredBranches = filteredBranches.filter((b) => String(b.regionId) === selectedRegionId);
+      }
+
+      const totalBranches = filteredBranches.length;
+      const uploadedBranchesCount = filteredBranches.filter((b) => b.uploaded).length;
+      const recordCount = filteredBranches.reduce((acc, curr) => acc + curr.recordCount, 0);
+      const uploaded = uploadedBranchesCount > 0;
+      
+      const uploadedAt = filteredBranches.reduce((latest: any, curr) => {
+        if (!curr.uploadedAt) return latest;
+        if (!latest) return curr.uploadedAt;
+        return new Date(curr.uploadedAt) > new Date(latest) ? curr.uploadedAt : latest;
+      }, null);
+
+      return {
+        ...monthRecord,
+        pcr: {
+          ...monthRecord.pcr,
+          uploaded,
+          uploadedBranchesCount,
+          totalBranches,
+          recordCount,
+          uploadedAt,
+          branchesDetail: filteredBranches
+        }
+      };
+    });
+  }, [data, selectedRegionId, selectedBranchId, selectedYear, selectedMonth]);
+
+  // Group filtered records by year
   const groupedData = useMemo(() => {
     const groups: { [key: number]: MonthlyUploadStatus[] } = {};
-    data.forEach((item) => {
+    filteredData.forEach((item) => {
       if (!groups[item.year]) {
         groups[item.year] = [];
       }
       groups[item.year].push(item);
     });
-    // Sort years descending
     return Object.keys(groups)
       .map(Number)
       .sort((a, b) => b - a)
       .map((year) => ({
         year,
-        months: groups[year].sort((a, b) => b.month - a.month) // newest month first
+        months: groups[year].sort((a, b) => b.month - a.month)
       }));
-  }, [data]);
+  }, [filteredData]);
 
-  // Overall counts for stat cards
+  // Overall metrics summary matching filtered records
   const statsSummary = useMemo(() => {
-    if (data.length === 0) return { totalMonths: 0, crmCompletionRate: 0, pcrCompletionRate: 0 };
+    if (filteredData.length === 0) return { totalMonths: 0, crmCompletionRate: 0, pcrCompletionRate: 0 };
     
     let crmUploaded = 0;
     let totalPcrBranches = 0;
     let uploadedPcrBranches = 0;
 
-    data.forEach((m) => {
+    filteredData.forEach((m) => {
       if (m.crm.uploaded) crmUploaded++;
       totalPcrBranches += m.pcr.totalBranches;
       uploadedPcrBranches += m.pcr.uploadedBranchesCount;
     });
 
-    const crmRate = Math.round((crmUploaded / data.length) * 100);
+    const crmRate = Math.round((crmUploaded / filteredData.length) * 100);
     const pcrRate = totalPcrBranches > 0 ? Math.round((uploadedPcrBranches / totalPcrBranches) * 100) : 0;
 
     return {
-      totalMonths: data.length,
+      totalMonths: filteredData.length,
       crmCompletionRate: crmRate,
       pcrCompletionRate: pcrRate
     };
-  }, [data]);
+  }, [filteredData]);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
@@ -175,23 +310,123 @@ export default function DashboardPage() {
         </Button>
       </div>
 
+      {/* Filter Bar */}
+      {!loading && data.length > 0 && (
+        <Card className="border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm bg-white dark:bg-zinc-900/50 rounded-2xl">
+          <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Region selection */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-zinc-650 dark:text-zinc-300 flex items-center gap-1">
+                <Building2 className="w-3.5 h-3.5 text-zinc-400" /> Region / Sub-division
+              </label>
+              {loadingRegions ? (
+                <div className="h-10 flex items-center gap-2 px-3 border rounded-xl bg-zinc-50/50 text-xs text-muted-foreground">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading regions...
+                </div>
+              ) : (
+                <select
+                  value={selectedRegionId}
+                  onChange={(e) => {
+                    setSelectedRegionId(e.target.value);
+                    setSelectedBranchId('all');
+                  }}
+                  className="w-full h-10 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
+                >
+                  <option value="all">All Regions (Total India)</option>
+                  {regions.map((r) => (
+                    <option key={r.region_id} value={r.region_id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Branch selection */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-zinc-650 dark:text-zinc-300 flex items-center gap-1">
+                <Building2 className="w-3.5 h-3.5 text-zinc-400" /> Target Branch
+              </label>
+              {loadingBranches ? (
+                <div className="h-10 flex items-center gap-2 px-3 border rounded-xl bg-zinc-50/50 text-xs text-muted-foreground">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading branches...
+                </div>
+              ) : (
+                <select
+                  value={selectedBranchId}
+                  onChange={(e) => setSelectedBranchId(e.target.value)}
+                  className="w-full h-10 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
+                >
+                  <option value="all">
+                    {selectedRegionId === 'all' ? 'All Branches (Total System)' : 'All Branches in Region'}
+                  </option>
+                  {filteredBranchDropdownOptions.map((b) => (
+                    <option key={b.branch_id} value={b.branch_id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Year selection */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-zinc-650 dark:text-zinc-300 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-zinc-400" /> Filter Year
+              </label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="w-full h-10 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
+              >
+                <option value="all">All Years</option>
+                {uniqueYears.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Month selection */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-zinc-650 dark:text-zinc-300 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-zinc-400" /> Filter Month
+              </label>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="w-full h-10 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
+              >
+                <option value="all">All Months</option>
+                {filterMonthOptions.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary Cards */}
       {!loading && data.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm bg-white dark:bg-zinc-900/50 rounded-2xl">
             <CardContent className="p-5 flex flex-col justify-between h-24">
-              <div className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Months Tracked</div>
+              <div className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Periods Monitored</div>
               <div className="text-2xl font-black text-zinc-900 dark:text-zinc-50 flex items-baseline gap-1">
-                {statsSummary.totalMonths} <span className="text-xs text-muted-foreground font-medium">periods with active data</span>
+                {statsSummary.totalMonths} <span className="text-xs text-muted-foreground font-medium">months of data</span>
               </div>
             </CardContent>
           </Card>
 
           <Card className="border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm bg-white dark:bg-zinc-900/50 rounded-2xl">
             <CardContent className="p-5 flex flex-col justify-between h-24">
-              <div className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400">CRM Upload Status</div>
+              <div className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-450">CRM Upload Status</div>
               <div className="space-y-1">
-                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{statsSummary.crmCompletionRate}%</div>
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-450">{statsSummary.crmCompletionRate}%</div>
                 <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden shadow-inner">
                   <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${statsSummary.crmCompletionRate}%` }} />
                 </div>
@@ -213,7 +448,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Loading view */}
+      {/* Loading View */}
       {loading && (
         <div className="flex flex-col items-center justify-center py-24 gap-3">
           <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
@@ -222,38 +457,32 @@ export default function DashboardPage() {
       )}
 
       {/* Empty State */}
-      {!loading && data.length === 0 && (
+      {!loading && filteredData.length === 0 && (
         <Card className="border border-dashed border-zinc-250 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 rounded-2xl p-12 text-center max-w-xl mx-auto space-y-4">
           <div className="p-4 bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600 rounded-full inline-block">
             <Calendar className="w-12 h-12" />
           </div>
           <div className="space-y-1.5">
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">No database upload logs found</h3>
+            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">No database upload logs match filters</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              It seems there are no CRM data entries or branch PCR sheets uploaded to the database yet. Please go to the upload page to submit your spreadsheets.
+              No CRM data or branch PCR sheets match the selected Year / Month combo. Try resetting the filters or check the upload module.
             </p>
           </div>
-          <Button
-            asChild
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-10 px-5 text-xs font-bold shadow-md cursor-pointer"
-          >
-            <a href="/dashboard/crm-upload">Go to Upload Module</a>
-          </Button>
         </Card>
       )}
 
-      {/* Year-by-Year Structured View */}
-      {!loading && data.length > 0 && (
+      {/* Year-by-Year Log Grid */}
+      {!loading && filteredData.length > 0 && (
         <div className="space-y-8">
           {groupedData.map((yearGroup) => (
             <div key={yearGroup.year} className="space-y-4">
-              {/* Year Banner */}
+              {/* Year Label */}
               <div className="flex items-center gap-3">
                 <span className="text-lg font-extrabold text-zinc-800 dark:text-zinc-200">{yearGroup.year} Uploads Log</span>
                 <div className="flex-1 h-px bg-zinc-200/60 dark:bg-zinc-800/40" />
               </div>
 
-              {/* Monthly logs Accordion grid */}
+              {/* Accordions */}
               <div className="space-y-3">
                 {yearGroup.months.map((item) => {
                   const key = `${item.year}-${item.month}`;
@@ -285,7 +514,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        {/* CRM Summary status */}
+                        {/* CRM Summary */}
                         <div className="flex flex-wrap md:flex-nowrap items-center gap-6">
                           <div className="space-y-1">
                             <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">CRM Uploaded</div>
@@ -302,33 +531,39 @@ export default function DashboardPage() {
                             </div>
                           </div>
 
-                          {/* PCR Summary progress */}
+                          {/* PCR Progress */}
                           <div className="space-y-1 min-w-[120px] md:min-w-[150px]">
                             <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex justify-between">
                               <span>PCR Branches</span>
                               <span>{item.pcr.uploadedBranchesCount} / {item.pcr.totalBranches}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden flex shadow-inner">
-                                <div
-                                  className={`h-full rounded-full transition-all duration-300 ${
-                                    pcrPercent === 100 ? 'bg-emerald-500' : 'bg-blue-600'
-                                  }`}
-                                  style={{ width: `${pcrPercent}%` }}
-                                />
-                              </div>
-                              <span className="text-[11px] font-bold text-zinc-500 shrink-0">{pcrPercent}%</span>
+                              {item.pcr.totalBranches > 0 ? (
+                                <>
+                                  <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden flex shadow-inner">
+                                    <div
+                                      className={`h-full rounded-full transition-all duration-300 ${
+                                        pcrPercent === 100 ? 'bg-emerald-500' : 'bg-blue-600'
+                                      }`}
+                                      style={{ width: `${pcrPercent}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-[11px] font-bold text-zinc-500 shrink-0">{pcrPercent}%</span>
+                                </>
+                              ) : (
+                                <span className="text-[11px] text-zinc-450 italic font-bold">No branches mapped</span>
+                              )}
                             </div>
                           </div>
 
-                          {/* Expand details button */}
+                          {/* Toggle */}
                           <div className="text-zinc-400 dark:text-zinc-500 md:ml-2">
                             {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                           </div>
                         </div>
                       </div>
 
-                      {/* Accordion Content Details */}
+                      {/* Expanded Section details */}
                       {isExpanded && (
                         <div className="px-5 pb-5 border-t border-zinc-100 dark:border-zinc-800/60 bg-zinc-50/20 dark:bg-zinc-950/15 animate-in fade-in duration-300">
                           <div className="pt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -339,13 +574,13 @@ export default function DashboardPage() {
                               <div className="bg-white dark:bg-zinc-900/60 p-4 rounded-xl border border-zinc-200/50 dark:border-zinc-800/40 space-y-2">
                                 <div className="flex justify-between text-xs font-semibold text-zinc-500">
                                   <span>Status:</span>
-                                  <Badge className={item.crm.uploaded ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'}>
+                                  <Badge className={item.crm.uploaded ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-450 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-700 dark:text-amber-450 border border-amber-500/20'}>
                                     {item.crm.uploaded ? 'Active' : 'Missing'}
                                   </Badge>
                                 </div>
                                 <div className="flex justify-between text-xs font-semibold text-zinc-500">
                                   <span>Total Records:</span>
-                                  <span className="text-zinc-900 dark:text-zinc-100 font-bold">{item.crm.recordCount.toLocaleString()} rows</span>
+                                  <span className="text-zinc-950 dark:text-zinc-100 font-bold">{item.crm.recordCount.toLocaleString()} rows</span>
                                 </div>
                                 <div className="flex justify-between text-xs font-semibold text-zinc-500">
                                   <span>Last Uploaded:</span>
@@ -354,39 +589,46 @@ export default function DashboardPage() {
                               </div>
                             </div>
 
-                            {/* PCR Branches detailed log list */}
+                            {/* Branch details checklist grid */}
                             <div className="space-y-3 lg:col-span-2">
                               <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1">
                                 <Building2 className="w-3.5 h-3.5" /> Branch-wise PCR claims logs
                               </h4>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[220px] overflow-y-auto pr-1">
-                                {item.pcr.branchesDetail.map((b) => (
-                                  <div
-                                    key={b.branchId}
-                                    className="p-3.5 rounded-xl border bg-white dark:bg-zinc-900/60 border-zinc-200/50 dark:border-zinc-800/40 shadow-sm flex items-center justify-between gap-3 text-xs"
-                                  >
-                                    <div className="space-y-0.5">
-                                      <div className="font-extrabold text-zinc-900 dark:text-zinc-50">{b.branchName}</div>
-                                      {b.uploaded && (
-                                        <div className="text-[9px] text-muted-foreground flex items-center gap-1 font-mono">
-                                          <Clock className="w-3 h-3 text-zinc-400" /> {formatDate(b.uploadedAt)}
-                                        </div>
-                                      )}
+                              {item.pcr.branchesDetail.length === 0 ? (
+                                <div className="p-6 border rounded-xl border-dashed border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 flex flex-col items-center justify-center text-center gap-2">
+                                  <Inbox className="w-8 h-8 text-zinc-300" />
+                                  <p className="text-xs text-muted-foreground font-semibold">No branches matching active filters</p>
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[220px] overflow-y-auto pr-1">
+                                  {item.pcr.branchesDetail.map((b) => (
+                                    <div
+                                      key={b.branchId}
+                                      className="p-3.5 rounded-xl border bg-white dark:bg-zinc-900/60 border-zinc-200/50 dark:border-zinc-800/40 shadow-sm flex items-center justify-between gap-3 text-xs"
+                                    >
+                                      <div className="space-y-0.5">
+                                        <div className="font-extrabold text-zinc-900 dark:text-zinc-50">{b.branchName}</div>
+                                        {b.uploaded && (
+                                          <div className="text-[9px] text-muted-foreground flex items-center gap-1 font-mono">
+                                            <Clock className="w-3 h-3 text-zinc-400" /> {formatDate(b.uploadedAt)}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {b.uploaded ? (
+                                          <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-450 border border-emerald-500/20 text-[10px] font-bold">
+                                            {b.recordCount.toLocaleString()} claims
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="outline" className="text-[10px] border-zinc-200 text-zinc-400 font-bold dark:border-zinc-800">
+                                            Pending
+                                          </Badge>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                      {b.uploaded ? (
-                                        <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">
-                                          {b.recordCount.toLocaleString()} claims
-                                        </Badge>
-                                      ) : (
-                                        <Badge variant="outline" className="text-[10px] border-zinc-200 text-zinc-400 font-bold dark:border-zinc-800">
-                                          Pending
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
 
                           </div>
