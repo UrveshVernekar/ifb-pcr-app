@@ -27,8 +27,14 @@ interface Franchise {
   region_name?: string;
 }
 
+interface Region {
+  region_id: number;
+  name: string;
+}
+
 interface Branch {
   branch_id: number;
+  region_id: number;
   name: string;
   code: string | null;
 }
@@ -36,8 +42,10 @@ interface Branch {
 export default function FranchisesPage() {
   const [franchises, setFranchises] = useState<Franchise[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [regionFilter, setRegionFilter] = useState<string>('all');
   const [branchFilter, setBranchFilter] = useState<number | ''>('');
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -97,17 +105,28 @@ export default function FranchisesPage() {
       const franchisesJson = await franchisesRes.json();
 
       // Fetch branches for selection dropdown
+      // Fetch branches for selection dropdown
       const branchesRes = await fetch(`${apiBase}/branches`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` },
       });
       const branchesJson = await branchesRes.json();
 
+      // Fetch regions for filtering
+      const regionsRes = await fetch(`${apiBase}/regions`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const regionsJson = await regionsRes.json();
+
       if (franchisesJson.success) {
         setFranchises(franchisesJson.data || []);
       }
       if (branchesJson.success) {
         setBranches(branchesJson.data || []);
+      }
+      if (regionsJson.success) {
+        setRegions(regionsJson.data || []);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -121,8 +140,38 @@ export default function FranchisesPage() {
     fetchData();
   }, [apiBase, branchFilter]);
 
+  // Reset branch select filter when selected region changes and current branch selection is outside that region
+  useEffect(() => {
+    if (regionFilter !== 'all' && branchFilter !== '') {
+      const matchedBranch = branches.find((b) => b.branch_id === branchFilter);
+      if (matchedBranch && String(matchedBranch.region_id) !== regionFilter) {
+        setBranchFilter('');
+      }
+    }
+  }, [regionFilter, branchFilter, branches]);
+
+  const filteredBranchesForFilter = useMemo(() => {
+    if (regionFilter === 'all') return branches;
+    return branches.filter((b) => String(b.region_id) === regionFilter);
+  }, [branches, regionFilter]);
+
   const filteredFranchises = useMemo(() => {
     return franchises.filter((f) => {
+      // Region filter
+      if (regionFilter !== 'all') {
+        const matchedBranch = branches.find((b) => b.branch_id === f.branch_id);
+        if (matchedBranch) {
+          if (String(matchedBranch.region_id) !== regionFilter) {
+            return false;
+          }
+        } else if (f.region_name) {
+          const matchedRegion = regions.find((r) => String(r.region_id) === regionFilter);
+          if (matchedRegion && f.region_name !== matchedRegion.name) {
+            return false;
+          }
+        }
+      }
+
       const nameMatch = f.name.toLowerCase().includes(searchQuery.toLowerCase());
       const codeMatch = f.code?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
       const contactPersonMatch = f.contact_person?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
@@ -130,7 +179,7 @@ export default function FranchisesPage() {
       const branchMatch = f.branch_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
       return nameMatch || codeMatch || contactPersonMatch || contactEmailMatch || branchMatch;
     });
-  }, [franchises, searchQuery]);
+  }, [franchises, searchQuery, regionFilter, branches, regions]);
 
   const columns: Column<Franchise>[] = useMemo(() => {
     const cols: Column<Franchise>[] = [
@@ -392,17 +441,33 @@ export default function FranchisesPage() {
         <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <CardTitle className="text-lg font-bold">Franchises List</CardTitle>
-            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto md:max-w-md">
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto md:max-w-xl">
+              {/* Filter by Region select */}
+              <div className="relative flex-1 sm:max-w-[200px]">
+                <Filter className="absolute left-3 top-2.5 w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 z-10 pointer-events-none" />
+                <Select value={regionFilter} onValueChange={setRegionFilter}>
+                  <SelectTrigger className="w-full h-9 pl-9 text-left justify-between items-center text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 text-zinc-900 dark:text-zinc-50 focus:ring-2 focus:ring-blue-500/15 font-semibold">
+                    <SelectValue placeholder="All Regions" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-[9999] text-xs">
+                    <SelectItem value="all" className="rounded-lg cursor-pointer text-xs">All Regions</SelectItem>
+                    {regions.map((r) => (
+                      <SelectItem key={r.region_id} value={String(r.region_id)} className="rounded-lg cursor-pointer text-xs">{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Filter by Branch select */}
               <div className="relative flex-1 sm:max-w-[200px]">
                 <Filter className="absolute left-3 top-2.5 w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 z-10 pointer-events-none" />
                 <Select value={branchFilter === '' ? 'All Branches' : String(branchFilter)} onValueChange={(val) => setBranchFilter(val === 'All Branches' ? '' : Number(val))}>
-                  <SelectTrigger className="w-full h-9 pl-9 text-left justify-between items-center text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 text-zinc-900 dark:text-zinc-50 focus:ring-2 focus:ring-blue-500/15">
+                  <SelectTrigger className="w-full h-9 pl-9 text-left justify-between items-center text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 text-zinc-900 dark:text-zinc-50 focus:ring-2 focus:ring-blue-500/15 font-semibold">
                     <SelectValue placeholder="All Branches" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-[9999] text-xs">
                     <SelectItem value="All Branches" className="rounded-lg cursor-pointer text-xs">All Branches</SelectItem>
-                    {branches.map((b) => (
+                    {filteredBranchesForFilter.map((b) => (
                       <SelectItem key={b.branch_id} value={String(b.branch_id)} className="rounded-lg cursor-pointer text-xs">{b.name}</SelectItem>
                     ))}
                   </SelectContent>

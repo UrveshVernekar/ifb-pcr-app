@@ -38,6 +38,7 @@ export default function BranchesPage() {
   const [regions, setRegions] = useState<Region[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRegionFilter, setSelectedRegionFilter] = useState<string>('all');
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Modal states
@@ -118,13 +119,16 @@ export default function BranchesPage() {
 
   const filteredBranches = useMemo(() => {
     return branches.filter((b) => {
+      if (selectedRegionFilter !== 'all' && String(b.region_id) !== selectedRegionFilter) {
+        return false;
+      }
       const nameMatch = b.name.toLowerCase().includes(searchQuery.toLowerCase());
       const codeMatch = b.code?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
       const regionMatch = b.region_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
       const cityMatch = b.city?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
       return nameMatch || codeMatch || regionMatch || cityMatch;
     });
-  }, [branches, searchQuery]);
+  }, [branches, searchQuery, selectedRegionFilter]);
 
   const columns: Column<Branch>[] = useMemo(() => {
     const cols: Column<Branch>[] = [
@@ -394,15 +398,30 @@ export default function BranchesPage() {
         <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <CardTitle className="text-lg font-bold">Branches List</CardTitle>
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-              <Input
-                type="text"
-                placeholder="Search by code, name, city..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 text-xs rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/30 border-zinc-200 dark:border-zinc-800"
-              />
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+              <div className="w-full sm:w-48">
+                <Select value={selectedRegionFilter} onValueChange={setSelectedRegionFilter}>
+                  <SelectTrigger className="w-full h-9 text-xs rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/30 border-zinc-200 dark:border-zinc-800 font-semibold">
+                    <SelectValue placeholder="All Regions" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-[9999] text-xs">
+                    <SelectItem value="all" className="rounded-lg cursor-pointer text-xs">All Regions</SelectItem>
+                    {regions.map((r) => (
+                      <SelectItem key={r.region_id} value={String(r.region_id)} className="rounded-lg cursor-pointer text-xs">{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+                <Input
+                  type="text"
+                  placeholder="Search by code, name, city..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9 text-xs rounded-xl border bg-zinc-50/50 dark:bg-zinc-950/30 border-zinc-200 dark:border-zinc-800"
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
