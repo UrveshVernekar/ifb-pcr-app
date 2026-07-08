@@ -31,6 +31,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 
 interface Branch {
   branch_id: number;
+  region_id: number;
+  name: string;
+  code: string | null;
+  is_active: boolean;
+}
+
+interface Region {
+  region_id: number;
+  name: string;
+  code: string | null;
+  is_active: boolean;
+}
+
+interface Franchise {
+  franchise_id: number;
+  branch_id: number;
   name: string;
   code: string | null;
   is_active: boolean;
@@ -76,20 +92,26 @@ export default function PhysicalVerificationPage() {
   const [role, setRole] = useState<string | null>(null);
 
   // Lists & data states
+  const [regions, setRegions] = useState<Region[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [franchises, setFranchises] = useState<Franchise[]>([]);
   const [parts, setParts] = useState<PartClaim[]>([]);
   const [summary, setSummary] = useState<Summary>({ total: 0, received: 0, notReceived: 0, pending: 0, damaged: 0 });
   const [branchOverview, setBranchOverview] = useState<BranchDamage[]>([]);
 
   // Loaders
-  const [loadingData, setLoadingData] = useState(false);
+  const [loadingRegions, setLoadingRegions] = useState(false);
   const [loadingBranches, setLoadingBranches] = useState(false);
+  const [loadingFranchises, setLoadingFranchises] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
   const [submittingId, setSubmittingId] = useState<string | null>(null); // tracks inline verification action submission
 
   // Filters state
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
+  const [selectedRegionId, setSelectedRegionId] = useState<string>('all');
   const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
+  const [selectedFranchiseId, setSelectedFranchiseId] = useState<string>('all');
   const [ticketQuery, setTicketQuery] = useState<string>('');
   const [activeTicketQuery, setActiveTicketQuery] = useState<string>('');
   const [partQuery, setPartQuery] = useState<string>('');
@@ -153,7 +175,35 @@ export default function PhysicalVerificationPage() {
     }
   }, []);
 
-  // 2. Fetch Branches
+  // 2. Fetch Regions
+  useEffect(() => {
+    const fetchRegions = async () => {
+      setLoadingRegions(true);
+      try {
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch(`${apiBase}/regions`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const json = await res.json();
+        if (json.success) {
+          const activeRegions = (json.data || []).filter((r: Region) => r.is_active);
+          activeRegions.sort((a: Region, b: Region) => a.name.localeCompare(b.name));
+          setRegions(activeRegions);
+        }
+      } catch (error) {
+        console.error('Failed to load regions:', error);
+        toast.error('Could not load region options');
+      } finally {
+        setLoadingRegions(false);
+      }
+    };
+    void fetchRegions();
+  }, [apiBase]);
+
+  // 3. Fetch Branches
   useEffect(() => {
     const fetchBranches = async () => {
       setLoadingBranches(true);
@@ -181,14 +231,56 @@ export default function PhysicalVerificationPage() {
     void fetchBranches();
   }, [apiBase]);
 
-  // 3. Fetch Verification List
+  // 4. Fetch Franchises based on selected branch
+  useEffect(() => {
+    const fetchFranchises = async () => {
+      if (selectedBranchId === 'all') {
+        setFranchises([]);
+        setSelectedFranchiseId('all');
+        return;
+      }
+      setLoadingFranchises(true);
+      try {
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch(`${apiBase}/franchises?branch_id=${selectedBranchId}`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const json = await res.json();
+        if (json.success) {
+          const activeFranchises = (json.data || []).filter((f: Franchise) => f.is_active);
+          activeFranchises.sort((a: Franchise, b: Franchise) => a.name.localeCompare(b.name));
+          setFranchises(activeFranchises);
+          setSelectedFranchiseId('all');
+        }
+      } catch (error) {
+        console.error('Failed to load franchises:', error);
+        toast.error('Could not load franchise options');
+      } finally {
+        setLoadingFranchises(false);
+      }
+    };
+    void fetchFranchises();
+  }, [apiBase, selectedBranchId]);
+
+  // Filter branches locally based on selected region
+  const filteredBranches = useMemo(() => {
+    if (selectedRegionId === 'all') return branches;
+    return branches.filter((b) => b.region_id === Number(selectedRegionId));
+  }, [branches, selectedRegionId]);
+
+  // 5. Fetch Verification List
   const fetchVerificationList = async () => {
     setLoadingData(true);
     try {
       const token = localStorage.getItem('accessToken');
       const branchParam = selectedBranchId === 'all' ? '' : selectedBranchId;
+      const regionParam = selectedRegionId === 'all' ? '' : selectedRegionId;
+      const franchiseParam = selectedFranchiseId === 'all' ? '' : selectedFranchiseId;
       const res = await fetch(
-        `${apiBase}/pcr-data/physical-verification?month=${month}&year=${year}&branchId=${branchParam}&ticketNumber=${encodeURIComponent(
+        `${apiBase}/pcr-data/physical-verification?month=${month}&year=${year}&branchId=${branchParam}&regionId=${regionParam}&franchiseId=${franchiseParam}&ticketNumber=${encodeURIComponent(
           activeTicketQuery
         )}&partCode=${encodeURIComponent(activePartQuery)}&page=${page}&limit=${limit}`,
         {
@@ -222,13 +314,13 @@ export default function PhysicalVerificationPage() {
   // Reset page to 1 when search or dropdown filters change
   useEffect(() => {
     setPage(1);
-  }, [month, year, selectedBranchId, activeTicketQuery, activePartQuery]);
+  }, [month, year, selectedRegionId, selectedBranchId, selectedFranchiseId, activeTicketQuery, activePartQuery]);
 
   useEffect(() => {
     void fetchVerificationList();
-  }, [month, year, selectedBranchId, activeTicketQuery, activePartQuery, page, limit]);
+  }, [month, year, selectedRegionId, selectedBranchId, selectedFranchiseId, activeTicketQuery, activePartQuery, page, limit]);
 
-  // 4. Focus scanner input on load
+  // 6. Focus scanner input on load
   useEffect(() => {
     if (searchInputRef.current) {
       searchInputRef.current.focus();
@@ -360,88 +452,162 @@ export default function PhysicalVerificationPage() {
       </div>
 
       {/* Quick Filters */}
-      <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end bg-card p-5 rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 shadow-md">
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-zinc-400" /> Target Year *
-          </label>
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="w-full h-11 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
-          >
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-zinc-400" /> Target Month *
-          </label>
-          <select
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-            className="w-full h-11 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
-          >
-            {months.map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
-            <Building2 className="w-3.5 h-3.5 text-zinc-400" /> Target Branch *
-          </label>
-          {loadingBranches ? (
-            <div className="h-11 flex items-center gap-2 px-3 border rounded-xl bg-zinc-50/50 text-xs text-muted-foreground">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading...
-            </div>
-          ) : (
+      <form onSubmit={handleSearchSubmit} className="bg-card p-5 rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 shadow-md space-y-4">
+        {/* Row 1: Target Hierarchy & Period */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Target Year */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-zinc-400" /> Target Year *
+            </label>
             <select
-              value={selectedBranchId}
-              onChange={(e) => setSelectedBranchId(e.target.value)}
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
               className="w-full h-11 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
             >
-              <option value="all">All Branches (Total System)</option>
-              {branches.map((b) => (
-                <option key={b.branch_id} value={b.branch_id}>
-                  {b.name}
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
                 </option>
               ))}
             </select>
-          )}
-        </div>
+          </div>
 
-        {/* Ticket ID search field */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
-            <QrCode className="w-3.5 h-3.5 text-zinc-400" /> Ticket ID
-          </label>
-          <div className="relative">
-            <Input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Enter Ticket ID..."
-              value={ticketQuery}
-              onChange={(e) => setTicketQuery(e.target.value)}
-              className="h-11 text-xs rounded-xl border bg-zinc-50/50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 focus-visible:ring-2 focus-visible:ring-blue-500 font-mono tracking-wide"
-            />
+          {/* Target Month */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-zinc-400" /> Target Month *
+            </label>
+            <select
+              value={month}
+              onChange={(e) => setMonth(Number(e.target.value))}
+              className="w-full h-11 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
+            >
+              {months.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Target Region */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
+              <Building2 className="w-3.5 h-3.5 text-zinc-400" /> Target Region
+            </label>
+            {loadingRegions ? (
+              <div className="h-11 flex items-center gap-2 px-3 border rounded-xl bg-zinc-50/50 text-xs text-muted-foreground">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading...
+              </div>
+            ) : (
+              <select
+                value={selectedRegionId}
+                onChange={(e) => {
+                  setSelectedRegionId(e.target.value);
+                  setSelectedBranchId('all');
+                  setSelectedFranchiseId('all');
+                  setFranchises([]);
+                }}
+                className="w-full h-11 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
+              >
+                <option value="all">All Regions (Total System)</option>
+                {regions.map((r) => (
+                  <option key={r.region_id} value={r.region_id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Target Branch */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
+              <Building2 className="w-3.5 h-3.5 text-zinc-400" /> Target Branch
+            </label>
+            {loadingBranches ? (
+              <div className="h-11 flex items-center gap-2 px-3 border rounded-xl bg-zinc-50/50 text-xs text-muted-foreground">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading...
+              </div>
+            ) : (
+              <select
+                value={selectedBranchId}
+                onChange={(e) => {
+                  setSelectedBranchId(e.target.value);
+                  setSelectedFranchiseId('all');
+                }}
+                className="w-full h-11 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
+              >
+                <option value="all">
+                  {selectedRegionId === 'all' ? 'All Branches (Total System)' : 'All Branches in Region'}
+                </option>
+                {filteredBranches.map((b) => (
+                  <option key={b.branch_id} value={b.branch_id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Target Franchise */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
+              <Building2 className="w-3.5 h-3.5 text-zinc-400" /> Target Franchise
+            </label>
+            {loadingFranchises ? (
+              <div className="h-11 flex items-center gap-2 px-3 border rounded-xl bg-zinc-50/50 text-xs text-muted-foreground">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading...
+              </div>
+            ) : (
+              <select
+                value={selectedFranchiseId}
+                onChange={(e) => setSelectedFranchiseId(e.target.value)}
+                disabled={selectedBranchId === 'all'}
+                className="w-full h-11 px-3 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {selectedBranchId === 'all' ? (
+                  <option value="all">Select a branch first</option>
+                ) : (
+                  <>
+                    <option value="all">All Franchises in Branch</option>
+                    {franchises.map((f) => (
+                      <option key={f.franchise_id} value={f.franchise_id}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
+            )}
           </div>
         </div>
 
-        {/* Part Code search field with action buttons */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
-            <QrCode className="w-3.5 h-3.5 text-zinc-400" /> Part Code
-          </label>
-          <div className="flex gap-2">
+        {/* Row 2: Search Query Inputs & Action Buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end pt-2 border-t border-zinc-100 dark:border-zinc-800/50">
+          {/* Ticket ID search field */}
+          <div className="space-y-1.5 sm:col-span-1">
+            <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
+              <QrCode className="w-3.5 h-3.5 text-zinc-400" /> Ticket ID
+            </label>
+            <div className="relative">
+              <Input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Enter Ticket ID..."
+                value={ticketQuery}
+                onChange={(e) => setTicketQuery(e.target.value)}
+                className="h-11 text-xs rounded-xl border bg-zinc-50/50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 focus-visible:ring-2 focus-visible:ring-blue-500 font-mono tracking-wide"
+              />
+            </div>
+          </div>
+
+          {/* Part Code search field */}
+          <div className="space-y-1.5 sm:col-span-1">
+            <label className="text-xs font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
+              <QrCode className="w-3.5 h-3.5 text-zinc-400" /> Part Code
+            </label>
             <Input
               type="text"
               placeholder="Enter Part Code..."
@@ -449,22 +615,24 @@ export default function PhysicalVerificationPage() {
               onChange={(e) => setPartQuery(e.target.value)}
               className="h-11 text-xs rounded-xl border bg-zinc-50/50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 focus-visible:ring-2 focus-visible:ring-blue-500 font-mono tracking-wide"
             />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 justify-end sm:col-span-1 h-11 items-end">
             <Button
               type="submit"
-              size="icon"
-              className="h-11 w-11 shrink-0 rounded-xl bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+              className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white cursor-pointer flex items-center gap-1.5 font-bold shadow-md shadow-blue-500/10 transition-all flex-1 sm:flex-initial"
             >
-              <Search className="w-4 h-4" />
+              <Search className="w-4 h-4" /> Filter & Search
             </Button>
             {(activeTicketQuery || activePartQuery || ticketQuery || partQuery) && (
               <Button
                 type="button"
                 variant="outline"
-                size="icon"
                 onClick={handleClearSearch}
-                className="h-11 w-11 shrink-0 rounded-xl cursor-pointer"
+                className="h-11 px-4 rounded-xl cursor-pointer flex items-center gap-1 font-bold border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className="w-4 h-4" /> Reset
               </Button>
             )}
           </div>
