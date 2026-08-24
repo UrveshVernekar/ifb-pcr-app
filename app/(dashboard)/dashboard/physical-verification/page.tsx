@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import QRCode from 'qrcode';
 import {
   ShieldCheck,
   Building2,
@@ -21,7 +23,8 @@ import {
   X,
   Download,
   FileSpreadsheet,
-  Eye
+  Eye,
+  Printer
 } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/auth-client';
 import { toast } from 'sonner';
@@ -147,9 +150,18 @@ export default function PhysicalVerificationPage() {
   const [exportStartDate, setExportStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [exportEndDate, setExportEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isExporting, setIsExporting] = useState(false);
-  
+
   // Touch/View Details Modal state (for damaged parts)
   const [viewingDamagedPart, setViewingDamagedPart] = useState<PartClaim | null>(null);
+
+  // Label Printing states
+  const [printPart, setPrintPart] = useState<PartClaim | null>(null);
+  const [qrUrl, setQrUrl] = useState<string>('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const apiBase = useMemo(() => getApiBaseUrl(), []);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -199,6 +211,31 @@ export default function PhysicalVerificationPage() {
       toast.error('Failed to export data spreadsheet: ' + err.message);
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  // Trigger browser label printing
+  const triggerLabelPrint = async (part: PartClaim) => {
+    try {
+      const warrantySuffix = part.warranty_status === 'IN WARRANTY' ? 'IW' : 'OG';
+      const qrText = `${part.ticket_id}_${part.part_code}_${warrantySuffix}`;
+
+      const dataUrl = await QRCode.toDataURL(qrText, {
+        margin: 1,
+        errorCorrectionLevel: 'M',
+        width: 150
+      });
+
+      setPrintPart(part);
+      setQrUrl(dataUrl);
+
+      // Delay slightly to allow state update and DOM rendering, then trigger printing
+      setTimeout(() => {
+        window.print();
+      }, 300);
+    } catch (err) {
+      console.error('Failed to generate QR code for label printing:', err);
+      toast.error('Failed to generate QR code for label printing.');
     }
   };
 
@@ -447,6 +484,11 @@ export default function PhysicalVerificationPage() {
         toast.success(`Part marked as ${status} successfully.`);
         // Reload page data
         void fetchVerificationList();
+
+        // Auto-print QR Code label if status is Received
+        if (status === 'Received') {
+          void triggerLabelPrint(part);
+        }
       } else {
         toast.error(json.message || 'Failed to submit verification status');
       }
@@ -488,8 +530,14 @@ export default function PhysicalVerificationPage() {
       const json = await res.json();
       if (json.success) {
         toast.success('Physical verification claims details updated.');
+        const partToPrint = editingPart;
         setEditingPart(null);
         void fetchVerificationList();
+
+        // Auto-print QR Code label if status is Received
+        if (editStatus === 'Received') {
+          void triggerLabelPrint(partToPrint);
+        }
       } else {
         toast.error(json.message || 'Failed to update details');
       }
@@ -727,8 +775,8 @@ export default function PhysicalVerificationPage() {
         <Card
           onClick={() => setActiveCardFilter('all')}
           className={`border cursor-pointer hover:shadow-md transition-all rounded-2xl select-none ${activeCardFilter === 'all'
-              ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/5 dark:bg-blue-950/10'
-              : 'border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/50'
+            ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/5 dark:bg-blue-950/10'
+            : 'border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/50'
             }`}
         >
           <CardContent className="p-5 flex flex-col justify-between h-24">
@@ -746,8 +794,8 @@ export default function PhysicalVerificationPage() {
         <Card
           onClick={() => setActiveCardFilter(activeCardFilter === 'Received' ? 'all' : 'Received')}
           className={`border cursor-pointer hover:shadow-md transition-all rounded-2xl select-none ${activeCardFilter === 'Received'
-              ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/10 dark:bg-emerald-950/10'
-              : 'border-emerald-200/50 dark:border-emerald-950/30 bg-emerald-50/[0.15] dark:bg-emerald-950/[0.05]'
+            ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/10 dark:bg-emerald-950/10'
+            : 'border-emerald-200/50 dark:border-emerald-950/30 bg-emerald-50/[0.15] dark:bg-emerald-950/[0.05]'
             }`}
         >
           <CardContent className="p-5 flex flex-col justify-between h-24">
@@ -765,8 +813,8 @@ export default function PhysicalVerificationPage() {
         <Card
           onClick={() => setActiveCardFilter(activeCardFilter === 'Pending' ? 'all' : 'Pending')}
           className={`border cursor-pointer hover:shadow-md transition-all rounded-2xl select-none ${activeCardFilter === 'Pending'
-              ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-50/10 dark:bg-amber-955/10'
-              : 'border-amber-200/50 dark:border-amber-950/30 bg-amber-50/[0.15] dark:bg-amber-950/[0.05]'
+            ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-50/10 dark:bg-amber-955/10'
+            : 'border-amber-200/50 dark:border-amber-950/30 bg-amber-50/[0.15] dark:bg-amber-950/[0.05]'
             }`}
         >
           <CardContent className="p-5 flex flex-col justify-between h-24">
@@ -784,8 +832,8 @@ export default function PhysicalVerificationPage() {
         <Card
           onClick={() => setActiveCardFilter(activeCardFilter === 'Not Received' ? 'all' : 'Not Received')}
           className={`border cursor-pointer hover:shadow-md transition-all rounded-2xl select-none ${activeCardFilter === 'Not Received'
-              ? 'ring-2 ring-red-500 border-red-500 bg-red-50/10 dark:bg-red-955/10'
-              : 'border-red-200/50 dark:border-red-950/30 bg-red-50/[0.15] dark:bg-red-950/[0.05]'
+            ? 'ring-2 ring-red-500 border-red-500 bg-red-50/10 dark:bg-red-955/10'
+            : 'border-red-200/50 dark:border-red-950/30 bg-red-50/[0.15] dark:bg-red-950/[0.05]'
             }`}
         >
           <CardContent className="p-5 flex flex-col justify-between h-24">
@@ -803,8 +851,8 @@ export default function PhysicalVerificationPage() {
         <Card
           onClick={() => setActiveCardFilter(activeCardFilter === 'Damaged' ? 'all' : 'Damaged')}
           className={`border cursor-pointer hover:shadow-md transition-all rounded-2xl select-none col-span-2 md:col-span-1 ${activeCardFilter === 'Damaged'
-              ? 'ring-2 ring-yellow-500 border-yellow-500 bg-yellow-50/10 dark:bg-yellow-955/10'
-              : 'border-yellow-250/50 dark:border-yellow-900/30 bg-yellow-50/[0.15] dark:bg-yellow-950/[0.05]'
+            ? 'ring-2 ring-yellow-500 border-yellow-500 bg-yellow-50/10 dark:bg-yellow-955/10'
+            : 'border-yellow-250/50 dark:border-yellow-900/30 bg-yellow-50/[0.15] dark:bg-yellow-950/[0.05]'
             }`}
         >
           <CardContent className="p-5 flex flex-col justify-between h-24">
@@ -950,22 +998,30 @@ export default function PhysicalVerificationPage() {
                             </TableCell>
                             <TableCell className="text-center">
                               <div className="flex justify-center items-center gap-1.5">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleFastVerify(part, 'Received')}
-                                  disabled={isSubmitting || part.verification_status === 'Received'}
-                                  className={`h-7 px-2.5 text-[10px] font-bold rounded-lg cursor-pointer flex items-center gap-0.5 transition-all ${part.verification_status === 'Received'
-                                    ? 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800'
-                                    : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/50'
-                                    }`}
-                                >
-                                  {isSubmitting && part.verification_status !== 'Received' ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                  ) : (
-                                    <Check className="w-3.5 h-3.5" />
-                                  )}
-                                  Received
-                                </Button>
+                                {part.verification_status === 'Received' ? (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => void triggerLabelPrint(part)}
+                                    className="h-7 px-2.5 text-[10px] font-bold rounded-lg cursor-pointer flex items-center gap-1 transition-all bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/50 shadow-sm"
+                                  >
+                                    <Printer className="w-3 h-3" />
+                                    Print Label
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleFastVerify(part, 'Received')}
+                                    disabled={isSubmitting}
+                                    className="h-7 px-2.5 text-[10px] font-bold rounded-lg cursor-pointer flex items-center gap-0.5 transition-all bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/50"
+                                  >
+                                    {isSubmitting ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <Check className="w-3.5 h-3.5" />
+                                    )}
+                                    Received
+                                  </Button>
+                                )}
                                 <Button
                                   size="sm"
                                   onClick={() => handleFastVerify(part, 'Not Received')}
@@ -1249,11 +1305,10 @@ export default function PhysicalVerificationPage() {
                       key={t.value}
                       type="button"
                       onClick={() => setExportType(t.value)}
-                      className={`py-2 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
-                        exportType === t.value
-                          ? 'bg-white dark:bg-zinc-950 text-emerald-600 dark:text-emerald-400 shadow-sm border border-zinc-200/30 dark:border-zinc-855'
-                          : 'text-zinc-500 hover:text-zinc-700'
-                      }`}
+                      className={`py-2 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${exportType === t.value
+                        ? 'bg-white dark:bg-zinc-950 text-emerald-600 dark:text-emerald-400 shadow-sm border border-zinc-200/30 dark:border-zinc-855'
+                        : 'text-zinc-500 hover:text-zinc-700'
+                        }`}
                     >
                       {t.label}
                     </button>
@@ -1439,6 +1494,273 @@ export default function PhysicalVerificationPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Hidden print container for universal 40mm x 20mm label */}
+      {mounted && printPart && typeof document !== 'undefined' && createPortal(
+        <div id="print-label-section">
+          <div className="print-label">
+            {/* Left Side */}
+            <div className="left-side">
+              {qrUrl ? (
+                <img src={qrUrl} className="qr-image" alt="QR Code" />
+              ) : (
+                <div className="qr-placeholder" />
+              )}
+              {/* <div className="part-code-divider"> */}
+              {/* <span>PART CODE</span> */}
+              {/* </div> */}
+              <div className="part-code-val">{printPart.part_code}</div>
+            </div>
+
+            {/* Vertical Divider */}
+            <div className="vertical-divider" />
+
+            {/* Right Side */}
+            <div className="right-side">
+              {/* Status Section */}
+              <div className="status-block">
+                <div className="status-label">STATUS</div>
+                <div className="status-value-box">
+                  {printPart.warranty_status === 'IN WARRANTY' ? (
+                    <>
+                      {/* <svg className="warranty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ width: '2.6mm', height: '2.6mm', color: '#007f3f' }}>
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        <path d="m9 11 2 2 4-4" />
+                      </svg> */}
+                      <span className="warranty-text in-warranty">SW</span>
+                    </>
+                  ) : (
+                    <>
+                      {/* <svg className="warranty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ width: '2.6mm', height: '2.6mm', color: '#b91c1c' }}>
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        <path d="m15 9-6 6M9 9l6 6" />
+                      </svg> */}
+                      <span className="warranty-text out-of-warranty">OG</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="horizontal-line" />
+
+              {/* Ticket ID Section */}
+              <div className="ticket-block">
+                <div className="ticket-label">TICKET ID</div>
+                <div className="ticket-value-box">
+                  <span className="ticket-val">{printPart.ticket_id}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @page {
+          size: 40mm 20mm;
+          margin: 0 !important;
+        }
+        @page {
+          margin: 0 !important;
+        }
+        @media print {
+          /* Hide all regular screen elements at the root body level */
+          body > *:not(#print-label-section) {
+            display: none !important;
+          }
+          /* Override layout and display elements only for print */
+          #print-label-section, #print-label-section * {
+            display: flex !important;
+          }
+          #print-label-section {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40mm;
+            height: 20mm;
+            margin: 0;
+            padding: 0;
+            background: white;
+            display: flex !important;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+          }
+          html, body {
+            width: 40mm;
+            height: 20mm;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white;
+            overflow: hidden !important;
+          }
+          
+          /* Label container styles */
+          .print-label {
+            width: 40mm;
+            height: 20mm;
+            padding: 1.2mm 1.5mm 0.8mm 1.5mm;
+            display: flex !important;
+            flex-direction: row !important;
+            box-sizing: border-box;
+            background: white;
+            color: black;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            align-items: center;
+          }
+          
+          /* Left Column (QR & Part Code) */
+          .print-label .left-side {
+            width: 15.5mm;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-sizing: border-box;
+          }
+          
+          .print-label .qr-image {
+            width: 11mm;
+            height: 11mm;
+            display: block !important;
+            margin-top: -1.5mm;
+          }
+          
+          .print-label .qr-placeholder {
+            width: 11mm;
+            height: 11mm;
+            background: #eee;
+          }
+          
+          /* Part code divider */
+          .print-label .part-code-divider {
+            width: 100%;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: 0.4mm 0;
+            box-sizing: border-box;
+          }
+          
+          .print-label .part-code-divider::before,
+          .print-label .part-code-divider::after {
+            content: '';
+            flex-grow: 1;
+            border-bottom: 0.15mm solid #666;
+          }
+          
+          .print-label .part-code-divider span {
+            font-size: 3pt;
+            font-weight: 800;
+            color: #0f2d59;
+            padding: 0 0.5mm;
+            white-space: nowrap;
+            display: inline-block !important;
+          }
+          
+          .print-label .part-code-val {
+            font-size: 5.5pt;
+            font-weight: 900;
+            color: black;
+            text-align: center;
+            line-height: 1.1;
+            white-space: nowrap;
+            display: block !important;
+          }
+          
+          /* Vertical separator */
+          .print-label .vertical-divider {
+            width: 0.15mm;
+            height: 17.6mm;
+            background-color: #ddd;
+            margin: 0 1mm;
+            display: block !important;
+          }
+          
+          /* Right Column */
+          .print-label .right-side {
+            width: 19.35mm;
+            height: 17.6mm;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            box-sizing: border-box;
+            padding: 0.3mm 0;
+          }
+          
+          .print-label .status-block,
+          .print-label .ticket-block {
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: flex-start !important;
+            height: 8.2mm;
+            box-sizing: border-box;
+            width: 100%;
+          }
+          
+          .print-label .status-label,
+          .print-label .ticket-label {
+            font-size: 5.8pt;
+            font-weight: 850;
+            color: #0f2d59;
+            line-height: 1;
+            text-transform: uppercase;
+            display: block !important;
+            margin-bottom: 0.5mm;
+          }
+          
+          .print-label .status-value-box,
+          .print-label .ticket-value-box {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            gap: 0.4mm;
+            box-sizing: border-box;
+            width: 100%;
+          }
+          
+          .print-label .warranty-text {
+            font-size: 5.8pt;
+            font-weight: 900;
+            line-height: 1;
+            white-space: nowrap;
+            display: inline-block !important;
+          }
+          
+          .print-label .warranty-text.in-warranty {
+            color: #007f3f;
+          }
+          
+          .print-label .warranty-text.out-of-warranty {
+            color: #b91c1c;
+          }
+          
+          .print-label .horizontal-line {
+            height: 0.15mm;
+            background-color: #ddd;
+            width: 100%;
+            display: block !important;
+          }
+          
+          .print-label .ticket-val {
+            font-size: 5.8pt;
+            font-weight: 900;
+            color: black;
+            white-space: nowrap;
+            display: inline-block !important;
+          }
+        }
+        
+        #print-label-section {
+          display: none;
+        }
+      `}} />
     </div>
   );
 }
